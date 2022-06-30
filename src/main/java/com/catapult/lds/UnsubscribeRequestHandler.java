@@ -29,6 +29,8 @@ public class UnsubscribeRequestHandler implements RequestHandler<APIGatewayV2Web
         String connectionId = event.getRequestContext().getConnectionId();
         subscriptionCacheService.cancelSubscription(connectionId, subscriptionId);
 
+        context.getLogger().log("subscription removed.  Connection id: " + connectionId + " subscriptionId: " + subscriptionId);
+
         return Util.createResponse(200, "ok");
     }
 }

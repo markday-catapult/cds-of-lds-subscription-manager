@@ -5,7 +5,10 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
 import com.catapult.lds.service.InMemorySubscriptionCacheService;
+import com.catapult.lds.service.Subscription;
 import com.catapult.lds.service.SubscriptionCacheService;
+
+import java.net.HttpURLConnection;
 
 /**
  * {@code SubscribeRequestHandler} is an implementation of {@link RequestHandler} that processes subscribe requests.
@@ -23,11 +26,15 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
     public APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent event, Context context) {
 
         // TODO build the subscription, including resource ID transform
-        SubscriptionCacheService.Subscription subscription = new SubscriptionCacheService.Subscription();
+        String requestBody = event.getBody();
+
+        Subscription subscription = new Subscription();
 
         String connectionId = event.getRequestContext().getConnectionId();
-        subscriptionCacheService.putSubscription(subscription);
 
-        return Util.createResponse(200, "ok");
+        context.getLogger().log("body: " + requestBody);
+        context.getLogger().log("connectionId: " + connectionId);
+
+        return Util.createResponse(HttpURLConnection.HTTP_OK, "ok");
     }
 }

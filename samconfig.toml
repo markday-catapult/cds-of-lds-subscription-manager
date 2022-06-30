@@ -1,0 +1,13 @@
+version = 0.1
+[jf-dev]
+[jf-dev.deploy]
+[jf-dev.deploy.parameters]
+stack_name = "jf-dev-subscription-function-stack"
+s3_bucket = "lambda-deployables-lds"
+s3_prefix = "subscription-function"
+region = "ap-southeast-2"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+image_repositories = []
+parameter_overrides= 'VersionId=versionId StackNamespace=jf StackEnv=dev ApiGatewayStack=jf-dev-lds-api-gateway VpcStack=si-dev-lds-vpc ApiGatewayStack:si-dev-lds-api-gateway KinesisStack=si-dev-lds-kinesis RedisClusterStack=si-dev-lds-elasticache-redis SecurityGroupStack=si-dev-lds-client-sg'

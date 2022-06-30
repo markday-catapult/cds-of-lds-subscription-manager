@@ -29,7 +29,6 @@ public class InMemorySubscriptionCacheService implements SubscriptionCacheServic
     @Override
     public void createConnection(String connectionId) {
         assert connectionId != null;
-
         subscriptionsByConnectionId.put(connectionId, new HashMap<>());
     }
 
@@ -39,6 +38,10 @@ public class InMemorySubscriptionCacheService implements SubscriptionCacheServic
     @Override
     public void closeConnection(String connectionId) {
         assert connectionId != null;
+
+        if (!subscriptionsByConnectionId.containsKey(connectionId)) {
+            return;
+        }
 
         subscriptionsByConnectionId
                 .get(connectionId)
@@ -53,7 +56,7 @@ public class InMemorySubscriptionCacheService implements SubscriptionCacheServic
      * {@inheritDoc}
      */
     @Override
-    public void putSubscription(SubscriptionCacheService.Subscription subscription) {
+    public void putSubscription(Subscription subscription) {
         assert subscription != null;
 
         String connectionId = subscription.getConnectionId();
@@ -89,7 +92,7 @@ public class InMemorySubscriptionCacheService implements SubscriptionCacheServic
      * {@inheritDoc}
      */
     @Override
-    public Collection<SubscriptionCacheService.Subscription> getSubscriptions(String connectionId) {
+    public Collection<Subscription> getSubscriptions(String connectionId) {
         assert connectionId != null;
 
         return Optional.ofNullable(subscriptionsByConnectionId.get(connectionId))
@@ -101,7 +104,7 @@ public class InMemorySubscriptionCacheService implements SubscriptionCacheServic
      * {@inheritDoc}
      */
     @Override
-    public SubscriptionCacheService.Subscription getSubscription(String connectionId, String subscriptionId) {
+    public Subscription getSubscription(String connectionId, String subscriptionId) {
         assert connectionId != null;
         assert subscriptionId != null;
 

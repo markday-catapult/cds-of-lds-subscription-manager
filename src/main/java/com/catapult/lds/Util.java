@@ -5,8 +5,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketRespons
 public class Util {
     public static APIGatewayV2WebSocketResponse createResponse(int status, String body) {
         APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
-        response.setStatusCode(200);
-        response.setBody("ok");
+        response.setStatusCode(status);
+        response.setBody(body);
         return response;
     }
 }
