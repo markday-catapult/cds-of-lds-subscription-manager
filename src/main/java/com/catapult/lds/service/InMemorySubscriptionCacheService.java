@@ -62,7 +62,14 @@ public class InMemorySubscriptionCacheService implements SubscriptionCacheServic
         String connectionId = subscription.getConnectionId();
         String subscriptionId = subscription.getId();
 
+        System.out.println("Creating subscription");
+        System.out.println("connectionId: " + connectionId);
+        System.out.println("subscriptionId: " + subscriptionId);
+
         Map<String, Subscription> subscriptionById = subscriptionsByConnectionId.get(subscriptionId);
+
+        System.out.println("subscriptionById: " + subscriptionById);
+
         assert subscriptionById != null;
 
         subscriptionById.put(subscriptionId, subscription);

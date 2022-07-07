@@ -96,7 +96,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      * {@inheritDoc}
      */
     @Override
-    public void putSubscription(Subscription subscription) {
+    public void putSubscription(Subscription subscription) throws SubscriptionException {
 
     }
 

@@ -30,7 +30,7 @@ public interface SubscriptionCacheService {
      *
      * @pre subscription != null
      */
-    public void putSubscription(Subscription subscription);
+    public void putSubscription(Subscription subscription) throws SubscriptionException;
 
     /**
      * Cancels the subscription identified by the given connection id and subscription id.

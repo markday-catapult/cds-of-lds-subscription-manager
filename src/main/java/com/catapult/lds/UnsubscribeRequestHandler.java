@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
-import com.catapult.lds.service.InMemorySubscriptionCacheService;
+import com.catapult.lds.service.SimpleCacheService;
 import com.catapult.lds.service.SubscriptionCacheService;
 
 /**
@@ -18,7 +18,7 @@ public class UnsubscribeRequestHandler implements RequestHandler<APIGatewayV2Web
      *
      * @invariant subscriptionCacheService != null
      */
-    private static SubscriptionCacheService subscriptionCacheService = InMemorySubscriptionCacheService.instance;
+    private static SubscriptionCacheService subscriptionCacheService = SimpleCacheService.instance;
 
     @Override
     public APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent event, Context context) {
@@ -31,6 +31,6 @@ public class UnsubscribeRequestHandler implements RequestHandler<APIGatewayV2Web
 
         context.getLogger().log("subscription removed.  Connection id: " + connectionId + " subscriptionId: " + subscriptionId);
 
-        return Util.createResponse(200, "ok");
+        return Util.createResponse(200, "unsubscribe ok");
     }
 }

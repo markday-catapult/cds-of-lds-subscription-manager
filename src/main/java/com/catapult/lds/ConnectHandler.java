@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
-import com.catapult.lds.service.RedisSubscriptionCacheService;
+import com.catapult.lds.service.SimpleCacheService;
 import com.catapult.lds.service.SubscriptionCacheService;
 import com.catapult.lds.service.SubscriptionException;
 
@@ -20,7 +20,7 @@ public class ConnectHandler implements RequestHandler<APIGatewayV2WebSocketEvent
      *
      * @invariant subscriptionCacheService != null
      */
-    private static SubscriptionCacheService subscriptionCacheService = RedisSubscriptionCacheService.instance;
+    private static SubscriptionCacheService subscriptionCacheService = SimpleCacheService.instance;
 
     @Override
     public APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent event, Context context) {
@@ -32,7 +32,10 @@ public class ConnectHandler implements RequestHandler<APIGatewayV2WebSocketEvent
             context.getLogger().log("creating connection: " + connectionId);
             subscriptionCacheService.createConnection(connectionId);
             context.getLogger().log("connection opened.  Connection id: " + connectionId);
-            return Util.createResponse(HttpURLConnection.HTTP_OK, "ok");
+            APIGatewayV2WebSocketResponse response = Util.createResponse(HttpURLConnection.HTTP_OK, "ok");
+
+            context.getLogger().log("Responding with: " + response.toString());
+            return response;
         } catch (SubscriptionException e) {
             context.getLogger().log(e.getMessage());
             return Util.createResponse(HttpURLConnection.HTTP_CONFLICT, e.getMessage());

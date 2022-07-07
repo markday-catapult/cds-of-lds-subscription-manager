@@ -12,6 +12,11 @@ public class Subscription {
     private String connectionId;
     private String resourceIdsJson;
 
+    public Subscription(String connectionId) {
+        this.connectionId = connectionId;
+        this.resourceIdsJson = "{}";
+    }
+
     /**
      * Returns the id of this subscription
      *
