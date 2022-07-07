@@ -22,24 +22,33 @@ public class ConnectHandler implements RequestHandler<APIGatewayV2WebSocketEvent
      */
     private static SubscriptionCacheService subscriptionCacheService = SimpleCacheService.instance;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent event, Context context) {
 
-        context.getLogger().log("Handling request: " + event.toString());
-        String connectionId = event.getRequestContext().getConnectionId();
-
         try {
-            context.getLogger().log("creating connection: " + connectionId);
-            subscriptionCacheService.createConnection(connectionId);
-            context.getLogger().log("connection opened.  Connection id: " + connectionId);
-            APIGatewayV2WebSocketResponse response = Util.createResponse(HttpURLConnection.HTTP_OK, "ok");
+            String connectionId = event.getRequestContext().getConnectionId();
 
-            context.getLogger().log("Responding with: " + response.toString());
+            if (connectionId == null) {
+                APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+                response.setStatusCode(HttpURLConnection.HTTP_BAD_REQUEST);
+                response.setBody("connectionId was not defined");
+                return response;
+            }
+
+            subscriptionCacheService.createConnection(connectionId);
+
+            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+            response.setStatusCode(HttpURLConnection.HTTP_OK);
+            response.setBody("ok");
             return response;
         } catch (SubscriptionException e) {
-            context.getLogger().log(e.getMessage());
-            return Util.createResponse(HttpURLConnection.HTTP_CONFLICT, e.getMessage());
+            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+            response.setStatusCode(HttpURLConnection.HTTP_CONFLICT);
+            response.setBody(e.getMessage());
+            return response;
         }
-
     }
 }

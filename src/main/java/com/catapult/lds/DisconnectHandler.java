@@ -22,18 +22,33 @@ public class DisconnectHandler implements RequestHandler<APIGatewayV2WebSocketEv
      */
     private static SubscriptionCacheService subscriptionCacheService = SimpleCacheService.instance;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent event, Context context) {
 
         String connectionId = event.getRequestContext().getConnectionId();
+        if (connectionId == null) {
+            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+            response.setStatusCode(HttpURLConnection.HTTP_BAD_REQUEST);
+            response.setBody("connectionId was not defined");
+            return response;
+        }
 
         try {
             subscriptionCacheService.closeConnection(connectionId);
             context.getLogger().log("connection closed.  Connection id: " + connectionId);
-            return Util.createResponse(HttpURLConnection.HTTP_NO_CONTENT, "ok");
+            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+            response.setStatusCode(HttpURLConnection.HTTP_NO_CONTENT);
+            response.setBody("ok");
+            return response;
         } catch (SubscriptionException e) {
             context.getLogger().log(e.getMessage());
-            return Util.createResponse(HttpURLConnection.HTTP_GONE, e.getMessage());
+            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+            response.setStatusCode(HttpURLConnection.HTTP_GONE);
+            response.setBody(e.getMessage());
+            return response;
         }
     }
 }

@@ -8,9 +8,13 @@ import com.catapult.lds.service.SimpleCacheService;
 import com.catapult.lds.service.Subscription;
 import com.catapult.lds.service.SubscriptionCacheService;
 import com.catapult.lds.service.SubscriptionException;
-import org.json.JSONObject;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.net.HttpURLConnection;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * {@code SubscribeRequestHandler} is an implementation of {@link RequestHandler} that processes subscribe requests.
@@ -24,32 +28,89 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
      */
     private static SubscriptionCacheService subscriptionCacheService = SimpleCacheService.instance;
 
+    /**
+     * The object mapper used by this handler.
+     *
+     * @invariant objectMapper != null;
+     */
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent event, Context context) {
 
-        // TODO build the subscription, including resource ID transform
-        String requestBody = event.getBody();
+        final String connectionId;
+        final SubscriptionRequest subscriptionRequest;
 
-        String connectionId = event.getRequestContext().getConnectionId();
-
-        context.getLogger().log("body: " + requestBody);
-        context.getLogger().log("connectionId: " + connectionId);
-
+        // Deserialize and validate the request
         try {
-            Subscription subscription = new Subscription(connectionId);
-            subscriptionCacheService.createConnection(connectionId);
-            subscriptionCacheService.putSubscription(subscription);
+            connectionId = event.getRequestContext().getConnectionId();
+            subscriptionRequest = SubscribeRequestHandler.objectMapper.readValue(event.getBody(),
+                    SubscriptionRequest.class);
 
-            JSONObject responseBody = new JSONObject();
-            responseBody.put("subscriptionId", subscription.getId());
-
-            APIGatewayV2WebSocketResponse response = Util.createResponse(HttpURLConnection.HTTP_OK, responseBody.toString());
-
-            context.getLogger().log("Responding with: " + response.toString());
-            return response;
-        } catch (SubscriptionException e) {
-            return Util.createResponse(HttpURLConnection.HTTP_INTERNAL_ERROR, e.getMessage());
+            if (connectionId == null) {
+                return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
+                        subscriptionRequest.requestId, "connectionId was not defined");
+            }
+            if (subscriptionRequest.requestId == null || subscriptionRequest.resources == null) {
+                return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
+                        subscriptionRequest.requestId, "Subscription request missing required fields");
+            }
+        } catch (JsonProcessingException e) {
+            return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST, null, e.getMessage());
         }
 
+        // process the request
+        try {
+
+            Subscription subscription = new Subscription(connectionId);
+
+            // TODO: Transform keys
+
+            // Add the subscription
+            subscriptionCacheService.putSubscription(subscription);
+
+            // return a successful response
+            return Util.createSubscriptionResponse(
+                    HttpURLConnection.HTTP_CREATED,
+                    subscriptionRequest.requestId,
+                    subscription.getId());
+        } catch (SubscriptionException e) {
+            // notify the client of any error
+            return Util.createSubscriptionErrorResponse(
+                    HttpURLConnection.HTTP_INTERNAL_ERROR,
+                    subscriptionRequest.requestId,
+                    e.getMessage());
+        }
+    }
+
+    /**
+     * {@code SubscriptionRequest} contains information needed to create a new subscription.
+     */
+    @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+    public static class SubscriptionRequest {
+        private String action;
+        private String requestId;
+        private Map<String, Collection<String>> resources;
+
+        /**
+         * Creates a new {@code SubscriptionRequest}.  For use by object mapper only
+         */
+        SubscriptionRequest() {
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public String toString() {
+            return "SubscriptionRequest{" +
+                    "action='" + action + '\'' +
+                    ", requestId='" + requestId + '\'' +
+                    ", resources=" + resources +
+                    '}';
+        }
     }
 }
