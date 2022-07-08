@@ -9,12 +9,11 @@ import io.lettuce.core.api.sync.RedisHashCommands;
 import io.lettuce.core.cluster.RedisClusterClient;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import io.lettuce.core.cluster.api.sync.RedisAdvancedClusterCommands;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,17 +51,10 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         String host = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_NAME);
         String port = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_PORT);
-        RedisURI redisURI = RedisURI.create(host, Integer.valueOf(port));
+        RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
 
         this.redisClient = RedisClusterClient.create(redisURI).connect();
     }
-
-    /**
-     * The logger used by this handler.
-     *
-     * @invariant logger != null
-     */
-    private final Logger logger = LoggerFactory.getLogger(RedisSubscriptionCacheService.class);
 
     /**
      * {@inheritDoc}
@@ -162,12 +154,12 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         }
 
         // add subscription to connection hash
-        syncCommands.hset(connectionKey, subscriptionId, subscription.getResourceListJson());
+        syncCommands.hset(connectionKey, subscriptionId, setToJsonString(subscription.getResources()));
 
         // DENORMALIZED CACHE UPDATE
 
         // get connections for all resources in the new subscription
-        Map<String, List<String>> connectionsByResourceId = getConnectionIdsForResourceIds(subscription.getResources());
+        Map<String, Set<String>> connectionsByResourceId = getConnectionIdsForResourceIds(subscription.getResources());
 
         // add the connection id to the list of connections
         connectionsByResourceId.values()
@@ -180,10 +172,10 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                 .stream()
                 .collect(Collectors.toMap(
                         kv -> kv.getKey(),
-                        kv -> listToJsonString(kv.getValue()))
+                        kv -> setToJsonString(kv.getValue()))
                 );
 
-        // if there are namespaced resources that were not initially associated with a connection, add them now.
+        // if there are name-spaced resources that were not initially associated with a connection, add them now.
         if (connectionsByResourceId.size() > 0) {
             syncCommands.mset(request);
         }
@@ -212,17 +204,17 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         // get all resources for this subscription and subtract the resources we need to keep
         Subscription subscriptionToRemove = this.getSubscription(connectionId, subscriptionId);
-        List<String> resourcesToDissociate = subscriptionToRemove.getResources();
+        Set<String> resourcesToDissociate = subscriptionToRemove.getResources();
         resourcesToDissociate.removeAll(resourcesToKeep);
 
         // get key value pairs for name-spaced resources (ie. "user-<user-id>" or "athlete-<athlete-id>")
         Map<String, String> modifiedConnectionJsonListByResourceId =
                 syncCommands.mget(resourcesToDissociate.toArray(String[]::new)).stream()
-                        .map(kv -> KeyValue.just(kv.getKey(), jsonStringToList(kv.getValue())))
+                        .map(kv -> KeyValue.just(kv.getKey(), jsonStringToSet(kv.getValue())))
                         .filter(kv -> kv.getValue().remove(connectionId) && !kv.getValue().isEmpty())
                         .collect(Collectors.toMap(
                                 kv -> kv.getKey(),
-                                kv -> listToJsonString(kv.getValue())));
+                                kv -> setToJsonString(kv.getValue())));
 
         List<String> resourcesWithoutConnections = new ArrayList<>(resourcesToDissociate);
         resourcesWithoutConnections.removeAll(modifiedConnectionJsonListByResourceId.keySet());
@@ -237,18 +229,18 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         syncCommands.hdel(connectionKey, subscriptionId);
     }
 
-    List<String> jsonStringToList(String jsonArrayString) {
+    Set<String> jsonStringToSet(String jsonArrayString) {
         try {
-            return objectMapper.readValue(jsonArrayString, new TypeReference<ArrayList<String>>() {
+            return objectMapper.readValue(jsonArrayString, new TypeReference<HashSet<String>>() {
             });
         } catch (JsonProcessingException e) {
             throw new AssertionError(e.getMessage());
         }
     }
 
-    String listToJsonString(List<String> list) {
+    String setToJsonString(Set<String> set) {
         try {
-            return objectMapper.writeValueAsString(list);
+            return objectMapper.writeValueAsString(set);
         } catch (JsonProcessingException e) {
             throw new AssertionError(e.getMessage());
         }
@@ -297,19 +289,19 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      * {@inheritDoc}
      */
     @Override
-    public Map<String, List<String>> getConnectionIdsForResourceIds(List<String> resourceIds) {
+    public Map<String, Set<String>> getConnectionIdsForResourceIds(Set<String> resourceIds) {
         assert resourceIds != null;
 
         if (resourceIds.isEmpty()) return Collections.emptyMap();
 
         RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
 
-        Map<String, List<String>> connectionsByResourceId =
+        Map<String, Set<String>> connectionsByResourceId =
                 syncCommands.mget(resourceIds.toArray(String[]::new))
                         .stream()
                         .collect(Collectors.toMap(
                                 kv -> kv.getKey(),
-                                kv -> kv.isEmpty() ? new ArrayList<>() : jsonStringToList(kv.getValue()))
+                                kv -> kv.isEmpty() ? new HashSet<>() : jsonStringToSet(kv.getValue()))
                         );
 
         assert resourceIds.size() == connectionsByResourceId.size();

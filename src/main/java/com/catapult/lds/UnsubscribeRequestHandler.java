@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
-import com.catapult.lds.service.SimpleCacheService;
 import com.catapult.lds.service.SubscriptionCacheService;
 import com.catapult.lds.service.SubscriptionException;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -24,7 +23,7 @@ public class UnsubscribeRequestHandler implements RequestHandler<APIGatewayV2Web
      *
      * @invariant subscriptionCacheService != null
      */
-    private static SubscriptionCacheService subscriptionCacheService = SimpleCacheService.instance;
+    private static final SubscriptionCacheService subscriptionCacheService = Util.cacheService;
 
     /**
      * The object mapper used by this handler.

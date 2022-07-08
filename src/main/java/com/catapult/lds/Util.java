@@ -1,12 +1,22 @@
 package com.catapult.lds;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
+import com.catapult.lds.service.RedisSubscriptionCacheService;
+import com.catapult.lds.service.SubscriptionCacheService;
 import org.json.JSONObject;
 
 /**
- * {@class Util} provides generic convenience methods to all handlers.
+ * {@code Util} provides generic convenience methods to all handlers.
  */
 public class Util {
+
+    /**
+     * The singleton {@code SubscriptionCacheService}
+     *
+     * @invariant subscriptionCacheService != null
+     */
+    public static SubscriptionCacheService cacheService = RedisSubscriptionCacheService.instance;
+
     public static APIGatewayV2WebSocketResponse createSubscriptionResponse(int status,
                                                                            String requestId,
                                                                            String subscriptionId) {

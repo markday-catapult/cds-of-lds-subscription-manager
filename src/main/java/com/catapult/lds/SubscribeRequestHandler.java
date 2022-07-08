@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
-import com.catapult.lds.service.SimpleCacheService;
 import com.catapult.lds.service.Subscription;
 import com.catapult.lds.service.SubscriptionCacheService;
 import com.catapult.lds.service.SubscriptionException;
@@ -13,9 +12,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.net.HttpURLConnection;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * {@code SubscribeRequestHandler} is an implementation of {@link RequestHandler} that processes subscribe requests.
@@ -27,7 +27,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
      *
      * @invariant subscriptionCacheService != null
      */
-    private static SubscriptionCacheService subscriptionCacheService = SimpleCacheService.instance;
+    private static final SubscriptionCacheService subscriptionCacheService = Util.cacheService;
 
     /**
      * The object mapper used by this handler.
@@ -55,7 +55,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
                 return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
                         subscriptionRequest.requestId, "connectionId was not defined");
             }
-            if (subscriptionRequest.requestId == null || subscriptionRequest.resources == null) {
+            if (subscriptionRequest.requestId == null || subscriptionRequest.resources == null || subscriptionRequest.resources.size() == 0) {
                 return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
                         subscriptionRequest.requestId, "Subscription request missing required fields");
             }
@@ -65,10 +65,13 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
 
         // process the request
         try {
+            Set<String> resources = subscriptionRequest.resources.entrySet()
+                    .stream()
+                    .map(e -> e.getValue().stream().map(s -> e.getKey() + "-" + s).collect(Collectors.toSet()))
+                    .flatMap(Set::stream)
+                    .collect(Collectors.toSet());
 
-            Subscription subscription = new Subscription(connectionId, new ArrayList<String>());
-
-            // TODO: Transform keys
+            Subscription subscription = new Subscription(connectionId, resources);
 
             // Add the subscription
             subscriptionCacheService.putSubscription(subscription);

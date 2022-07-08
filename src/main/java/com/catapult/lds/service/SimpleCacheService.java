@@ -1,10 +1,11 @@
 package com.catapult.lds.service;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class SimpleCacheService implements SubscriptionCacheService {
 
@@ -16,7 +17,7 @@ public class SimpleCacheService implements SubscriptionCacheService {
     }
 
     @Override
-    public void createConnection(String connectionId) throws SubscriptionException {
+    public void createConnection(String connectionId) {
     }
 
     @Override
@@ -25,12 +26,12 @@ public class SimpleCacheService implements SubscriptionCacheService {
     }
 
     @Override
-    public void closeConnection(String connectionId) throws SubscriptionException {
+    public void closeConnection(String connectionId) {
 
     }
 
     @Override
-    public void putSubscription(Subscription subscription) throws SubscriptionException {
+    public void putSubscription(Subscription subscription) {
 
     }
 
@@ -41,19 +42,18 @@ public class SimpleCacheService implements SubscriptionCacheService {
 
     @Override
     public Collection<Subscription> getSubscriptions(String connectionId) {
-        Subscription s = new Subscription(connectionId, new ArrayList<>());
+        Subscription s = new Subscription(connectionId, new HashSet<>());
 
         return Collections.singletonList(s);
     }
 
     @Override
     public Subscription getSubscription(String connectionId, String subscriptionId) {
-        Subscription s = new Subscription(connectionId, new ArrayList<>());
-        return s;
+        return new Subscription(connectionId, Collections.singleton("resource-id"));
     }
 
     @Override
-    public Map<String, List<String>> getConnectionIdsForResourceIds(List<String> criteria) {
-        return Collections.emptyMap();
+    public Map<String, Set<String>> getConnectionIdsForResourceIds(Set<String> resourceIds) {
+        return resourceIds.stream().collect(Collectors.toMap(s -> s, s -> Collections.singleton("resource-id")));
     }
 }

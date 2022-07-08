@@ -7,10 +7,11 @@ import org.testng.Assert;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
+import org.testng.collections.Sets;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class RedisSubscriptionCacheServiceTest {
@@ -22,7 +23,7 @@ public class RedisSubscriptionCacheServiceTest {
     void beforeTest() {
         String host = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_NAME);
         String port = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_PORT);
-        RedisURI redisURI = RedisURI.create(host, Integer.valueOf(port));
+        RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
         StatefulRedisClusterConnection<String, String> redisClient = RedisClusterClient.create(redisURI).connect();
         redisClient.sync().flushall();
     }
@@ -31,7 +32,7 @@ public class RedisSubscriptionCacheServiceTest {
     void afterTest() {
         String host = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_NAME);
         String port = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_PORT);
-        RedisURI redisURI = RedisURI.create(host, Integer.valueOf(port));
+        RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
         StatefulRedisClusterConnection<String, String> redisClient = RedisClusterClient.create(redisURI).connect();
         List<String> keys = redisClient.sync().keys("*");
         System.out.println("==========================");
@@ -85,7 +86,8 @@ public class RedisSubscriptionCacheServiceTest {
         String athleteResource2 = "athlete-id-2";
         String deviceResource1 = "device-id-1";
         String deviceResource2 = "device-id-2";
-        List<String> allFourResourceIds = Arrays.asList(athleteResource1, athleteResource2, deviceResource1, deviceResource2);
+        Set<String> allFourResourceIds = Sets.newHashSet(athleteResource1, athleteResource2, deviceResource1,
+                deviceResource2);
 
         // asking for subscriptions for a non-existent connection should throw an exception
         Assert.assertThrows(SubscriptionException.class, () -> cacheService.getSubscriptions(connectionId1));
@@ -96,10 +98,10 @@ public class RedisSubscriptionCacheServiceTest {
         // no subscriptions exist for this connection yet
         Assert.assertEquals(cacheService.getSubscriptions(connectionId1).size(), 0);
 
-        Subscription subscription1 = new Subscription(connectionId1, Arrays.asList(athleteResource1, athleteResource2));
-        Subscription subscription2 = new Subscription(connectionId1, Arrays.asList(athleteResource1, deviceResource1,
+        Subscription subscription1 = new Subscription(connectionId1, Sets.newHashSet(athleteResource1, athleteResource2));
+        Subscription subscription2 = new Subscription(connectionId1, Sets.newHashSet(athleteResource1, deviceResource1,
                 deviceResource2));
-        Subscription subscription3 = new Subscription(connectionId1, Arrays.asList(deviceResource1, athleteResource1));
+        Subscription subscription3 = new Subscription(connectionId1, Sets.newHashSet(deviceResource1, athleteResource1));
 
         cacheService.putSubscription(subscription1);
         cacheService.putSubscription(subscription2);
@@ -108,8 +110,11 @@ public class RedisSubscriptionCacheServiceTest {
         // 3 subscriptions exist for this connection
         Assert.assertEquals(cacheService.getSubscriptions(connectionId1).size(), 3);
 
-        // all 4 resources have connections associated with them
-        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(allFourResourceIds).size(), 4);
+        // all 4 resources have the correct connections associated with them
+        Assert.assertTrue(cacheService.getConnectionIdsForResourceIds(allFourResourceIds).get(deviceResource1).contains(connectionId1));
+        Assert.assertTrue(cacheService.getConnectionIdsForResourceIds(allFourResourceIds).get(deviceResource2).contains(connectionId1));
+        Assert.assertTrue(cacheService.getConnectionIdsForResourceIds(allFourResourceIds).get(athleteResource2).contains(connectionId1));
+        Assert.assertTrue(cacheService.getConnectionIdsForResourceIds(allFourResourceIds).get(athleteResource2).contains(connectionId1));
 
         // cancel subscription 2
         cacheService.cancelSubscription(subscription2.getConnectionId(), subscription2.getId());
@@ -119,8 +124,10 @@ public class RedisSubscriptionCacheServiceTest {
 
         // 'deviceResource2' no longer has a connection associates with it resources have connections associated with
         // them
-        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(allFourResourceIds).size(), 3);
-        Assert.assertFalse(cacheService.getConnectionIdsForResourceIds(allFourResourceIds).containsKey(deviceResource2));
+        Assert.assertTrue(cacheService.getConnectionIdsForResourceIds(allFourResourceIds).get(deviceResource1).contains(connectionId1));
+        Assert.assertTrue(cacheService.getConnectionIdsForResourceIds(allFourResourceIds).get(deviceResource2).isEmpty());
+        Assert.assertTrue(cacheService.getConnectionIdsForResourceIds(allFourResourceIds).get(athleteResource2).contains(connectionId1));
+        Assert.assertTrue(cacheService.getConnectionIdsForResourceIds(allFourResourceIds).get(athleteResource2).contains(connectionId1));
     }
 
     @Test
@@ -141,31 +148,31 @@ public class RedisSubscriptionCacheServiceTest {
         cacheService.createConnection(trainer2ConnectionId);
         cacheService.createConnection(trainer3ConnectionId);
 
-        Subscription trainer1Subscription = new Subscription(trainer1ConnectionId, Arrays.asList(ath1Id, ath2Id, ath3Id));
-        Subscription trainer2Subscription = new Subscription(trainer2ConnectionId, Arrays.asList(ath2Id, ath3Id, ath4Id));
-        Subscription trainer3Subscription = new Subscription(trainer3ConnectionId, Arrays.asList(ath3Id, ath4Id, ath5Id));
+        Subscription trainer1Subscription = new Subscription(trainer1ConnectionId, Sets.newHashSet(ath1Id, ath2Id, ath3Id));
+        Subscription trainer2Subscription = new Subscription(trainer2ConnectionId, Sets.newHashSet(ath2Id, ath3Id, ath4Id));
+        Subscription trainer3Subscription = new Subscription(trainer3ConnectionId, Sets.newHashSet(ath3Id, ath4Id, ath5Id));
 
         cacheService.putSubscription(trainer1Subscription);
         cacheService.putSubscription(trainer2Subscription);
         cacheService.putSubscription(trainer3Subscription);
 
         // make sure each resource has the appropriate number of connections
-        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singletonList(ath1Id)).get(ath1Id).size(),
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath1Id)).get(ath1Id).size(),
                 1);
-        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singletonList(ath2Id)).get(ath2Id).size(), 2);
-        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singletonList(ath3Id)).get(ath3Id).size(), 3);
-        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singletonList(ath4Id)).get(ath4Id).size(), 2);
-        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singletonList(ath5Id)).get(ath5Id).size(), 1);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath2Id)).get(ath2Id).size(), 2);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath3Id)).get(ath3Id).size(), 3);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath4Id)).get(ath4Id).size(), 2);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath5Id)).get(ath5Id).size(), 1);
 
         // cancel subscription 1
         cacheService.cancelSubscription(trainer1Subscription.getConnectionId(), trainer1Subscription.getId());
 
         // make sure each resource has the appropriate number of connections
-        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singletonList(ath1Id)).get(ath1Id).size(), 0);
-        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singletonList(ath2Id)).get(ath2Id).size(), 1);
-        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singletonList(ath3Id)).get(ath3Id).size(), 2);
-        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singletonList(ath4Id)).get(ath4Id).size(), 2);
-        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singletonList(ath5Id)).get(ath5Id).size(), 1);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath1Id)).get(ath1Id).size(), 0);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath2Id)).get(ath2Id).size(), 1);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath3Id)).get(ath3Id).size(), 2);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath4Id)).get(ath4Id).size(), 2);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath5Id)).get(ath5Id).size(), 1);
 
     }
 

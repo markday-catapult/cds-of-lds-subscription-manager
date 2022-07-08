@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
-import com.catapult.lds.service.SimpleCacheService;
 import com.catapult.lds.service.SubscriptionCacheService;
 import com.catapult.lds.service.SubscriptionException;
 
@@ -20,7 +19,7 @@ public class ConnectHandler implements RequestHandler<APIGatewayV2WebSocketEvent
      *
      * @invariant subscriptionCacheService != null
      */
-    private static SubscriptionCacheService subscriptionCacheService = SimpleCacheService.instance;
+    private static final SubscriptionCacheService subscriptionCacheService = Util.cacheService;
 
     /**
      * {@inheritDoc}

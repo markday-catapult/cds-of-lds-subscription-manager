@@ -2,8 +2,8 @@ package com.catapult.lds.service;
 
 import org.json.JSONArray;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -15,15 +15,15 @@ public class Subscription {
 
     private final String id;
     private final String connectionId;
-    private final List<String> resources;
+    private final Set<String> resources;
 
-    public Subscription(String connectionId, List<String> resources) {
+    public Subscription(String connectionId, Set<String> resources) {
         assert connectionId != null;
         assert !resources.isEmpty();
 
         this.id = UUID.randomUUID().toString();
         this.connectionId = connectionId;
-        this.resources = List.copyOf(resources);
+        this.resources = Set.copyOf(resources);
     }
 
     public Subscription(String connectionId, String id, String resourceListJson) {
@@ -34,8 +34,8 @@ public class Subscription {
         this.connectionId = connectionId;
         this.resources =
                 StreamSupport.stream(new JSONArray(resourceListJson).spliterator(), false)
-                        .map(o -> o.toString())
-                        .collect(Collectors.toList());
+                        .map(Object::toString)
+                        .collect(Collectors.toSet());
     }
 
     /**
@@ -57,24 +57,12 @@ public class Subscription {
     }
 
     /**
-     * Returns the list of resources ids for this subscription.  These resource ids will already * have the keyspace
+     * Returns the set of resources ids for this subscription.  These resource ids will already * have the keyspace
      * prefix applied to them.
      *
      * @post !return.isEmpty()
      */
-    public List<String> getResources() {
-        return new ArrayList<>(this.resources);
-    }
-
-    /**
-     * Returns a list of resource ids for this subscription, in stringified json format.  The resource ids will already
-     * have the keyspace prefix applied to them.
-     * <p/>
-     * <code>["U-user-id-1", "D-device-id-3", "D-device-id-7"]</code>
-     *
-     * @post return != null
-     */
-    public String getResourceListJson() {
-        return org.json.simple.JSONArray.toJSONString(this.getResources());
+    public Set<String> getResources() {
+        return new HashSet<>(this.resources);
     }
 }
