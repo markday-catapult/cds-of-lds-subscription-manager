@@ -1,16 +1,24 @@
 package com.catapult.lds.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.lettuce.core.KeyValue;
 import io.lettuce.core.RedisURI;
+import io.lettuce.core.api.sync.RedisHashCommands;
 import io.lettuce.core.cluster.RedisClusterClient;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import io.lettuce.core.cluster.api.sync.RedisAdvancedClusterCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
@@ -30,6 +38,8 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      * The name of the key which has a value of the timestamp that a hash value was created at.
      */
     private final static String CREATED_AT = "created_at";
+
+    private final static ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Connection to AWS Elasticache redis cluster
@@ -58,11 +68,20 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      * {@inheritDoc}
      */
     @Override
+    public boolean isConnected() {
+        return this.redisClient.isOpen();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void createConnection(String connectionId) throws SubscriptionException {
         assert connectionId != null;
 
-        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
-        boolean success = syncCommands.hsetnx(connectionId, CREATED_AT, new Date().toString());
+        RedisHashCommands<String, String> syncCommands = this.redisClient.sync();
+        String connectionKey = connectionIdToKey(connectionId);
+        boolean success = syncCommands.hsetnx(connectionKey, CREATED_AT, "" + System.currentTimeMillis());
 
         if (!success) {
             throw new SubscriptionException(String.format("Connection '%s' already exists in the cache.",
@@ -74,22 +93,51 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      * {@inheritDoc}
      */
     @Override
+    public boolean connectionExists(String connectionId) {
+        assert connectionId != null;
+        String connectionKey = connectionIdToKey(connectionId);
+
+        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
+
+        return syncCommands.exists(connectionKey) > 0;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void closeConnection(String connectionId) throws SubscriptionException {
         assert connectionId != null;
 
         RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
 
-        if (syncCommands.exists(connectionId) == 0) {
+        String connectionKey = connectionIdToKey(connectionId);
+        if (syncCommands.exists(connectionKey) == 0) {
             throw new SubscriptionException(String.format("Connection '%s' does not exist in the cache.",
                     connectionId));
         }
 
-        syncCommands.hkeys(connectionId)
+        syncCommands.hkeys(connectionKey)
                 .stream()
                 .filter(k -> !CREATED_AT.equals(k)) // don't include the created_at key
-                .forEach(k -> cancelSubscription(connectionId, k)); // cancel all remaining subscriptions
+                .forEach(k -> cancelSubscriptionInternal(connectionId, k)); // cancel all remaining subscriptions
 
-        syncCommands.del(connectionId);
+        syncCommands.del(connectionKey);
+    }
+
+    /**
+     * {@linkplain #cancelSubscription Cancels} the subscription identified by the given connection id and subscription
+     * id, suppressing the exception when a connection is not found.
+     *
+     * @pre connectionId != null
+     * @pre subscriptionId != null
+     */
+    private void cancelSubscriptionInternal(String connectionId, String subscriptionId) {
+        try {
+            cancelSubscription(connectionId, subscriptionId);
+        } catch (SubscriptionException e) {
+            // ignore this exception
+        }
     }
 
     /**
@@ -97,23 +145,136 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      */
     @Override
     public void putSubscription(Subscription subscription) throws SubscriptionException {
+        assert subscription != null;
 
+        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
+
+        String connectionId = subscription.getConnectionId();
+        String subscriptionId = subscription.getId();
+        String connectionKey = connectionIdToKey(connectionId);
+        if (syncCommands.exists(connectionKey) == 0) {
+            throw new SubscriptionException(String.format("Connection '%s' does not exist in the cache.",
+                    connectionId));
+        }
+        if (syncCommands.hexists(connectionKey, subscriptionId)) {
+            throw new SubscriptionException(String.format("subscription '%s' for connection `%s` already exists in " +
+                    "the cache.", subscriptionId, connectionId));
+        }
+
+        // add subscription to connection hash
+        syncCommands.hset(connectionKey, subscriptionId, subscription.getResourceListJson());
+
+        // DENORMALIZED CACHE UPDATE
+
+        // get connections for all resources in the new subscription
+        Map<String, List<String>> connectionsByResourceId = getConnectionIdsForResourceIds(subscription.getResources());
+
+        // add the connection id to the list of connections
+        connectionsByResourceId.values()
+                .stream()
+                .filter(v -> !v.contains(connectionId))
+                .forEach(v -> v.add(connectionId));
+
+        Map<String, String> request = connectionsByResourceId
+                .entrySet()
+                .stream()
+                .collect(Collectors.toMap(
+                        kv -> kv.getKey(),
+                        kv -> listToJsonString(kv.getValue()))
+                );
+
+        // if there are namespaced resources that were not initially associated with a connection, add them now.
+        if (connectionsByResourceId.size() > 0) {
+            syncCommands.mset(request);
+        }
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void cancelSubscription(String connectionId, String subscriptionId) {
+    public void cancelSubscription(String connectionId, String subscriptionId) throws SubscriptionException {
+        assert connectionId != null;
+        assert subscriptionId != null;
 
+        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
+
+        String connectionKey = connectionIdToKey(connectionId);
+
+        // adjust denormalized cache here
+
+        // get all resources for this connection we need to keep
+        Set<String> resourcesToKeep = this.getSubscriptions(connectionId)
+                .stream()
+                .filter(s -> !s.getId().equals(subscriptionId))
+                .flatMap(s -> s.getResources().stream())
+                .collect(Collectors.toSet());
+
+        // get all resources for this subscription and subtract the resources we need to keep
+        Subscription subscriptionToRemove = this.getSubscription(connectionId, subscriptionId);
+        List<String> resourcesToDissociate = subscriptionToRemove.getResources();
+        resourcesToDissociate.removeAll(resourcesToKeep);
+
+        // get key value pairs for name-spaced resources (ie. "user-<user-id>" or "athlete-<athlete-id>")
+        Map<String, String> modifiedConnectionJsonListByResourceId =
+                syncCommands.mget(resourcesToDissociate.toArray(String[]::new)).stream()
+                        .map(kv -> KeyValue.just(kv.getKey(), jsonStringToList(kv.getValue())))
+                        .filter(kv -> kv.getValue().remove(connectionId) && !kv.getValue().isEmpty())
+                        .collect(Collectors.toMap(
+                                kv -> kv.getKey(),
+                                kv -> listToJsonString(kv.getValue())));
+
+        List<String> resourcesWithoutConnections = new ArrayList<>(resourcesToDissociate);
+        resourcesWithoutConnections.removeAll(modifiedConnectionJsonListByResourceId.keySet());
+
+        // delete resource cache entries
+        syncCommands.del(resourcesWithoutConnections.toArray(String[]::new));
+        // modify resource cache entries
+        if (modifiedConnectionJsonListByResourceId.size() > 0) {
+            syncCommands.mset(modifiedConnectionJsonListByResourceId);
+        }
+
+        syncCommands.hdel(connectionKey, subscriptionId);
+    }
+
+    List<String> jsonStringToList(String jsonArrayString) {
+        try {
+            return objectMapper.readValue(jsonArrayString, new TypeReference<ArrayList<String>>() {
+            });
+        } catch (JsonProcessingException e) {
+            throw new AssertionError(e.getMessage());
+        }
+    }
+
+    String listToJsonString(List<String> list) {
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (JsonProcessingException e) {
+            throw new AssertionError(e.getMessage());
+        }
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Collection<Subscription> getSubscriptions(String connectionId) {
-        return null;
+    public Collection<Subscription> getSubscriptions(String connectionId) throws SubscriptionException {
+        assert connectionId != null;
+
+        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
+
+        String connectionKey = connectionIdToKey(connectionId);
+
+        Map<String, String> resourceListsBySubscriptionId = syncCommands.hgetall(connectionKey);
+        if (resourceListsBySubscriptionId.isEmpty()) {
+            throw new SubscriptionException(String.format("Connection '%s' does not exist in the cache", connectionId));
+        }
+
+        return resourceListsBySubscriptionId.entrySet()
+                .stream()
+                .filter(e -> !CREATED_AT.equals(e.getKey()))
+                .map(e -> new Subscription(connectionId, e.getKey(), e.getValue()))
+                .collect(Collectors.toSet());
     }
 
     /**
@@ -121,14 +282,51 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      */
     @Override
     public Subscription getSubscription(String connectionId, String subscriptionId) {
-        return null;
+        assert connectionId != null;
+        assert subscriptionId != null;
+
+        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
+
+        String connectionKey = connectionIdToKey(connectionId);
+        String resourceJson = syncCommands.hget(connectionKey, subscriptionId);
+
+        return resourceJson == null ? null : new Subscription(connectionId, subscriptionId, resourceJson);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Map<String, List<String>> getConnectionIdsForResourceIds(java.util.List<String> criteria) {
-        return null;
+    public Map<String, List<String>> getConnectionIdsForResourceIds(List<String> resourceIds) {
+        assert resourceIds != null;
+
+        if (resourceIds.isEmpty()) return Collections.emptyMap();
+
+        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
+
+        Map<String, List<String>> connectionsByResourceId =
+                syncCommands.mget(resourceIds.toArray(String[]::new))
+                        .stream()
+                        .collect(Collectors.toMap(
+                                kv -> kv.getKey(),
+                                kv -> kv.isEmpty() ? new ArrayList<>() : jsonStringToList(kv.getValue()))
+                        );
+
+        assert resourceIds.size() == connectionsByResourceId.size();
+
+        return connectionsByResourceId;
+    }
+
+    private final static String CONNECTION_NAMESPACE = "$connection-id-";
+
+    /**
+     * Returns the key of the given connection id
+     *
+     * @pre connectionId != null
+     * @post return != null
+     */
+    private String connectionIdToKey(String connectionId) {
+        assert connectionId != null;
+        return CONNECTION_NAMESPACE + connectionId;
     }
 }

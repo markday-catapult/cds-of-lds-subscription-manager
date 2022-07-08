@@ -13,6 +13,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
@@ -65,7 +66,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
         // process the request
         try {
 
-            Subscription subscription = new Subscription(connectionId);
+            Subscription subscription = new Subscription(connectionId, new ArrayList<String>());
 
             // TODO: Transform keys
 

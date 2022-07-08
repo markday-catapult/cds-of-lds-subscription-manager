@@ -1,20 +1,41 @@
 package com.catapult.lds.service;
 
+import org.json.JSONArray;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  * {@code Subscription} is an immutable.... TBD
  */
 public class Subscription {
 
-    private String id = UUID.randomUUID().toString();
-    private long createdAt = System.currentTimeMillis();
-    private String connectionId;
-    private String resourceIdsJson;
+    private final String id;
+    private final String connectionId;
+    private final List<String> resources;
 
-    public Subscription(String connectionId) {
+    public Subscription(String connectionId, List<String> resources) {
+        assert connectionId != null;
+        assert !resources.isEmpty();
+
+        this.id = UUID.randomUUID().toString();
         this.connectionId = connectionId;
-        this.resourceIdsJson = "{}";
+        this.resources = List.copyOf(resources);
+    }
+
+    public Subscription(String connectionId, String id, String resourceListJson) {
+        assert connectionId != null;
+        assert resourceListJson != null;
+
+        this.id = id;
+        this.connectionId = connectionId;
+        this.resources =
+                StreamSupport.stream(new JSONArray(resourceListJson).spliterator(), false)
+                        .map(o -> o.toString())
+                        .collect(Collectors.toList());
     }
 
     /**
@@ -36,12 +57,13 @@ public class Subscription {
     }
 
     /**
-     * Returns the timestamp of when this subscription was created.
+     * Returns the list of resources ids for this subscription.  These resource ids will already * have the keyspace
+     * prefix applied to them.
      *
-     * @post return > 0
+     * @post !return.isEmpty()
      */
-    public long getCreatedAt() {
-        return this.createdAt;
+    public List<String> getResources() {
+        return new ArrayList<>(this.resources);
     }
 
     /**
@@ -52,7 +74,7 @@ public class Subscription {
      *
      * @post return != null
      */
-    public String getResourceIdsJson() {
-        return this.resourceIdsJson;
+    public String getResourceListJson() {
+        return org.json.simple.JSONArray.toJSONString(this.getResources());
     }
 }

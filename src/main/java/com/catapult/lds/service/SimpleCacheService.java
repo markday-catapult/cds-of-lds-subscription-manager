@@ -1,5 +1,6 @@
 package com.catapult.lds.service;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -10,7 +11,17 @@ public class SimpleCacheService implements SubscriptionCacheService {
     public static final SubscriptionCacheService instance = new SimpleCacheService();
 
     @Override
+    public boolean isConnected() {
+        return true;
+    }
+
+    @Override
     public void createConnection(String connectionId) throws SubscriptionException {
+    }
+
+    @Override
+    public boolean connectionExists(String connectionId) {
+        return true;
     }
 
     @Override
@@ -30,14 +41,14 @@ public class SimpleCacheService implements SubscriptionCacheService {
 
     @Override
     public Collection<Subscription> getSubscriptions(String connectionId) {
-        Subscription s = new Subscription(connectionId);
+        Subscription s = new Subscription(connectionId, new ArrayList<>());
 
         return Collections.singletonList(s);
     }
 
     @Override
     public Subscription getSubscription(String connectionId, String subscriptionId) {
-        Subscription s = new Subscription(connectionId);
+        Subscription s = new Subscription(connectionId, new ArrayList<>());
         return s;
     }
 

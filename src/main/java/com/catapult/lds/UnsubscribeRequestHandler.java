@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
 import com.catapult.lds.service.SimpleCacheService;
 import com.catapult.lds.service.SubscriptionCacheService;
+import com.catapult.lds.service.SubscriptionException;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -61,14 +62,19 @@ public class UnsubscribeRequestHandler implements RequestHandler<APIGatewayV2Web
 
         // process the request
         String subscriptionId = unsubscribeRequest.subscriptionId;
-        subscriptionCacheService.cancelSubscription(connectionId, subscriptionId);
+        try {
+            subscriptionCacheService.cancelSubscription(connectionId, subscriptionId);
 
-        // return a successful response
-        APIGatewayV2WebSocketResponse response = Util.createUnsubscribeResponse(
-                HttpURLConnection.HTTP_OK,
-                unsubscribeRequest.requestId);
-
-        return response;
+            // return a successful response
+            return Util.createUnsubscribeResponse(
+                    HttpURLConnection.HTTP_OK,
+                    unsubscribeRequest.requestId);
+        } catch (SubscriptionException e) {
+            return Util.createSubscriptionErrorResponse(
+                    HttpURLConnection.HTTP_GONE,
+                    unsubscribeRequest.requestId,
+                    e.getMessage());
+        }
     }
 
     @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
