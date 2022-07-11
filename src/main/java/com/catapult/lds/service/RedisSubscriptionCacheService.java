@@ -4,11 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.lettuce.core.KeyValue;
+import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.api.sync.RedisHashCommands;
-import io.lettuce.core.cluster.RedisClusterClient;
-import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
-import io.lettuce.core.cluster.api.sync.RedisAdvancedClusterCommands;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,7 +45,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      *
      * @invariant redisClient != null
      */
-    private final StatefulRedisClusterConnection<String, String> redisClient;
+    private final StatefulRedisConnection<String, String> redisClient;
 
     private RedisSubscriptionCacheService() {
 
@@ -53,7 +53,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         String port = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_PORT);
         RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
 
-        this.redisClient = RedisClusterClient.create(redisURI).connect();
+        this.redisClient = RedisClient.create(redisURI).connect();
     }
 
     /**
@@ -89,7 +89,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         assert connectionId != null;
         String connectionKey = connectionIdToKey(connectionId);
 
-        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
+        RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         return syncCommands.exists(connectionKey) > 0;
     }
@@ -101,7 +101,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     public void closeConnection(String connectionId) throws SubscriptionException {
         assert connectionId != null;
 
-        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
+        RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         String connectionKey = connectionIdToKey(connectionId);
         if (syncCommands.exists(connectionKey) == 0) {
@@ -139,7 +139,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     public void putSubscription(Subscription subscription) throws SubscriptionException {
         assert subscription != null;
 
-        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
+        RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         String connectionId = subscription.getConnectionId();
         String subscriptionId = subscription.getId();
@@ -189,7 +189,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         assert connectionId != null;
         assert subscriptionId != null;
 
-        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
+        RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         String connectionKey = connectionIdToKey(connectionId);
 
@@ -253,7 +253,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     public Collection<Subscription> getSubscriptions(String connectionId) throws SubscriptionException {
         assert connectionId != null;
 
-        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
+        RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         String connectionKey = connectionIdToKey(connectionId);
 
@@ -277,7 +277,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         assert connectionId != null;
         assert subscriptionId != null;
 
-        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
+        RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         String connectionKey = connectionIdToKey(connectionId);
         String resourceJson = syncCommands.hget(connectionKey, subscriptionId);
@@ -294,7 +294,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         if (resourceIds.isEmpty()) return Collections.emptyMap();
 
-        RedisAdvancedClusterCommands<String, String> syncCommands = this.redisClient.sync();
+        RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         Map<String, Set<String>> connectionsByResourceId =
                 syncCommands.mget(resourceIds.toArray(String[]::new))

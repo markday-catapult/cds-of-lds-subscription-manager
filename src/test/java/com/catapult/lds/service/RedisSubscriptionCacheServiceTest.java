@@ -1,8 +1,8 @@
 package com.catapult.lds.service;
 
+import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
-import io.lettuce.core.cluster.RedisClusterClient;
-import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
+import io.lettuce.core.api.StatefulRedisConnection;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
@@ -24,7 +24,7 @@ public class RedisSubscriptionCacheServiceTest {
         String host = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_NAME);
         String port = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_PORT);
         RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
-        StatefulRedisClusterConnection<String, String> redisClient = RedisClusterClient.create(redisURI).connect();
+        StatefulRedisConnection<String, String> redisClient = RedisClient.create(redisURI).connect();
         redisClient.sync().flushall();
     }
 
@@ -33,7 +33,7 @@ public class RedisSubscriptionCacheServiceTest {
         String host = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_NAME);
         String port = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_PORT);
         RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
-        StatefulRedisClusterConnection<String, String> redisClient = RedisClusterClient.create(redisURI).connect();
+        StatefulRedisConnection<String, String> redisClient = RedisClient.create(redisURI).connect();
         List<String> keys = redisClient.sync().keys("*");
         System.out.println("==========================");
         keys.forEach(k -> System.out.println(k + ": " + (redisClient.sync().type(k).equals("string") ?
