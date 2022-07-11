@@ -174,6 +174,16 @@ public class RedisSubscriptionCacheServiceTest {
         Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath4Id)).get(ath4Id).size(), 2);
         Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath5Id)).get(ath5Id).size(), 1);
 
+        // close a connection
+        cacheService.closeConnection(trainer3ConnectionId);
+
+        // make sure each resource has the appropriate number of connections
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath1Id)).get(ath1Id).size(), 0);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath2Id)).get(ath2Id).size(), 1);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath3Id)).get(ath3Id).size(), 1);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath4Id)).get(ath4Id).size(), 1);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath5Id)).get(ath5Id).size(), 0);
+
     }
 
 }
