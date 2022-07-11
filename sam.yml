@@ -62,6 +62,51 @@ Conditions:
   UseStackNamespace: !Or [ !Equals [ !Ref StackEnv, "dev" ], !Equals [ !Ref StackEnv, "test" ] ]
 
 Resources:
+  # Connect Authorization Function
+  WebsocketConnectAuthorizeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - x86_64
+      AutoPublishAlias: !Ref VersionId
+      Description: The WebsocketConnectAuthorizeFunction handles the authorization for the '$connect' route.
+      FunctionName: !If
+        - UseStackNamespace
+        - !Sub '${StackNamespace}-${StackEnv}-of-lds-websocket-connect-authorize'
+        - !Sub '${StackEnv}-of-lds-websocket-connect-authorize'
+      Handler: com.catapult.lds.ConnectAuthorizationHandler::handleRequest
+      PackageType: Zip
+      Runtime: java11
+      MemorySize: 1024
+      Timeout: 10
+      Tracing: Active
+      Environment:
+        Variables:
+          EXECUTE_ARN: !Join
+            - ''
+            - - !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:'
+              - Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+              - '/'
+              - Fn::ImportValue: !Sub '${ApiGatewayStack}:stage-name'
+              - '/'
+              - '$connect'
+  WebsocketConnectAuthorizatFunctionApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref WebsocketConnectAuthorizeFunction
+      Principal: apigateway.amazonaws.com
+  ApiGatewayConnectAuthorizer:
+    Type: 'AWS::ApiGatewayV2::Authorizer'
+    Properties:
+      Name: ConnectAuthorizer
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      AuthorizerType: REQUEST
+      AuthorizerUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${WebsocketConnectAuthorizeFunction}/invocations'
+      IdentitySource:
+        - route.request.header.Authorization
+  # Websocket Connect Function
   WebsocketConnectFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -95,7 +140,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId:
-        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-gateway'
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       ContentHandlingStrategy: CONVERT_TO_TEXT
       Description: The Connect Integration
       IntegrationType: AWS_PROXY
@@ -106,8 +151,9 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId:
-        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-gateway'
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       ApiKeyRequired: No
+      AuthorizerId: !Ref ApiGatewayConnectAuthorizer
       OperationName: Connect
       RouteKey: $connect
       Target: !Join
@@ -115,12 +161,13 @@ Resources:
         - - integrations
           - !Ref ApiGatewayConnectIntegration
     DependsOn:
-      ApiGatewayConnectIntegration
+      - ApiGatewayConnectIntegration
+      - ApiGatewayConnectAuthorizer
   ApiGatewayConnectRouteResponse:
     Type: AWS::ApiGatewayV2::RouteResponse
     Properties:
       ApiId:
-        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-gateway'
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       RouteId: !Ref ApiGatewayConnectRoute
       RouteResponseKey: $default
     DependsOn:
@@ -159,7 +206,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId:
-        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-gateway'
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       ContentHandlingStrategy: CONVERT_TO_TEXT
       Description: The Subscribe Request Integration
       IntegrationType: AWS_PROXY
@@ -170,7 +217,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId:
-        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-gateway'
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       ApiKeyRequired: No
       OperationName: Subscribe
       RouteKey: subscribe
@@ -184,7 +231,7 @@ Resources:
     Type: AWS::ApiGatewayV2::RouteResponse
     Properties:
       ApiId:
-        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-gateway'
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       RouteId: !Ref ApiGatewaySubscribeRequestRoute
       RouteResponseKey: $default
     DependsOn:
@@ -223,7 +270,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId:
-        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-gateway'
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       ContentHandlingStrategy: CONVERT_TO_TEXT
       Description: The Unsubscribe Request Integration
       IntegrationType: AWS_PROXY
@@ -234,7 +281,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId:
-        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-gateway'
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       ApiKeyRequired: No
       OperationName: Unsubscribe
       RouteKey: unsubscribe
@@ -248,7 +295,7 @@ Resources:
     Type: AWS::ApiGatewayV2::RouteResponse
     Properties:
       ApiId:
-        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-gateway'
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       RouteId: !Ref ApiGatewayUnubscribeRequestRoute
       RouteResponseKey: $default
     DependsOn:
@@ -287,7 +334,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId:
-        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-gateway'
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       ContentHandlingStrategy: CONVERT_TO_TEXT
       Description: The Disconnect Integration
       IntegrationType: AWS_PROXY
@@ -298,7 +345,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId:
-        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-gateway'
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       ApiKeyRequired: No
       OperationName: Disonnect
       RouteKey: $disconnect
@@ -312,7 +359,7 @@ Resources:
     Type: AWS::ApiGatewayV2::RouteResponse
     Properties:
       ApiId:
-        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-gateway'
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       RouteId: !Ref ApiGatewayDisconnectRoute
       RouteResponseKey: $default
     DependsOn:
