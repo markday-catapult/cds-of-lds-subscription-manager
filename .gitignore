@@ -1,5 +1,4 @@
 .idea
 target
-.aws-sam
-packaged.yml
+.aws-sam/
 packaged.yaml
