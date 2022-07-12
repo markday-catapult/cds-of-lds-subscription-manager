@@ -12,7 +12,7 @@
 #       VpcStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-vpc \
 #       ApiGatewayStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-api-gateway \
 #       KinesisStack={STACK_NAMESPACE}-${STACK_ENV}-lds-kinesis \
-#       RedisClusterStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-elasticache-redis \
+#       RedisStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-elasticache-redis \
 #       SecurityGroupStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-client-sg \
 #       VersionId=`git rev-parse --short HEAD`
 
@@ -51,7 +51,7 @@ Parameters:
   ApiGatewayStack:
     Description: 'The name of the Api Gateway stack.'
     Type: String
-  RedisClusterStack:
+  RedisStack:
     Description: 'The name of the redis cluster stack.'
     Type: String
   SecurityGroupStack:
@@ -80,6 +80,12 @@ Resources:
       MemorySize: 1024
       Timeout: 10
       Tracing: Active
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
+        SubnetIds:
+          - Fn::ImportValue: !Sub '${VpcStack}:subnet-a-private'
+          - Fn::ImportValue: !Sub '${VpcStack}:subnet-b-private'
       Environment:
         Variables:
           EXECUTE_ARN: !Join
@@ -124,12 +130,18 @@ Resources:
       MemorySize: 1024
       Timeout: 10
       Tracing: Active
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
+        SubnetIds:
+          - Fn::ImportValue: !Sub '${VpcStack}:subnet-a-private'
+          - Fn::ImportValue: !Sub '${VpcStack}:subnet-b-private'
       Environment:
         Variables:
-          LDS_REDIS_CLUSTER_HOST:
-            Fn::ImportValue: !Sub  '${RedisClusterStack}:primary-end-point-address'
-          LDS_REDIS_CLUSTER_PORT:
-            Fn::ImportValue: !Sub  '${RedisClusterStack}:primary-end-point-port'
+          LDS_REDIS_HOST:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
+          LDS_REDIS_PORT:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
   WebsocketConnectFunctionApiGatewayPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -190,12 +202,18 @@ Resources:
       MemorySize: 1024
       Timeout: 10
       Tracing: Active
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
+        SubnetIds:
+          - Fn::ImportValue: !Sub '${VpcStack}:subnet-a-private'
+          - Fn::ImportValue: !Sub '${VpcStack}:subnet-b-private'
       Environment:
         Variables:
-          LDS_REDIS_CLUSTER_HOST:
-            Fn::ImportValue: !Sub  '${RedisClusterStack}:primary-end-point-address'
-          LDS_REDIS_CLUSTER_PORT:
-            Fn::ImportValue: !Sub  '${RedisClusterStack}:primary-end-point-port'
+          LDS_REDIS_HOST:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
+          LDS_REDIS_PORT:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
   WebsocketSubscribeRequestFunctionApiGatewayPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -254,12 +272,18 @@ Resources:
       MemorySize: 1024
       Timeout: 10
       Tracing: Active
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
+        SubnetIds:
+          - Fn::ImportValue: !Sub '${VpcStack}:subnet-a-private'
+          - Fn::ImportValue: !Sub '${VpcStack}:subnet-b-private'
       Environment:
         Variables:
-          LDS_REDIS_CLUSTER_HOST:
-            Fn::ImportValue: !Sub  '${RedisClusterStack}:primary-end-point-address'
-          LDS_REDIS_CLUSTER_PORT:
-            Fn::ImportValue: !Sub  '${RedisClusterStack}:primary-end-point-port'
+          LDS_REDIS_HOST:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
+          LDS_REDIS_PORT:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
   WebsocketUnsubscribeRequestFunctionApiGatewayPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -318,12 +342,18 @@ Resources:
       MemorySize: 1024
       Timeout: 10
       Tracing: Active
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
+        SubnetIds:
+          - Fn::ImportValue: !Sub '${VpcStack}:subnet-a-private'
+          - Fn::ImportValue: !Sub '${VpcStack}:subnet-b-private'
       Environment:
         Variables:
-          LDS_REDIS_CLUSTER_HOST:
-            Fn::ImportValue: !Sub  '${RedisClusterStack}:primary-end-point-address'
-          LDS_REDIS_CLUSTER_PORT:
-            Fn::ImportValue: !Sub  '${RedisClusterStack}:primary-end-point-port'
+          LDS_REDIS_HOST:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
+          LDS_REDIS_PORT:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
   WebsocketDisconnectFunctionApiGatewayPermission:
     Type: AWS::Lambda::Permission
     Properties:

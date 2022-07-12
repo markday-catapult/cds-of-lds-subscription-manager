@@ -48,6 +48,8 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
         // Deserialize and validate the request
         try {
             connectionId = event.getRequestContext().getConnectionId();
+            context.getLogger().log("Creating subscritpion for connection " + connectionId);
+
             subscriptionRequest = SubscribeRequestHandler.objectMapper.readValue(event.getBody(),
                     SubscriptionRequest.class);
 

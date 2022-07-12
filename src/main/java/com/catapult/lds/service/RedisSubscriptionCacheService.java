@@ -9,6 +9,8 @@ import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.api.sync.RedisHashCommands;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,12 +28,12 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     /**
      * The name of the environment variable which has a value of the url of the redis cluster.
      */
-    public final static String CLUSTER_ENV_NAME = "LDS_REDIS_CLUSTER_HOST";
+    public final static String CLUSTER_ENV_NAME = "LDS_REDIS_HOST";
 
     /**
      * The name of the environment variable which has a value of the url of the redis cluster port.
      */
-    public final static String CLUSTER_ENV_PORT = "LDS_REDIS_CLUSTER_PORT";
+    public final static String CLUSTER_ENV_PORT = "LDS_REDIS_PORT";
 
     /**
      * The name of the key which has a value of the timestamp that a hash value was created at.
@@ -46,6 +48,13 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      * @invariant redisClient != null
      */
     private final StatefulRedisConnection<String, String> redisClient;
+
+    /**
+     * The logger used by all instances of this handler.
+     *
+     * @invariant logger != null
+     */
+    private final Logger logger = LoggerFactory.getLogger(RedisSubscriptionCacheService.class);
 
     private RedisSubscriptionCacheService() {
 
@@ -71,7 +80,10 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     public void createConnection(String connectionId) throws SubscriptionException {
         assert connectionId != null;
 
+        this.logger.info("creating connection '{}' ", connectionId);
+
         RedisHashCommands<String, String> syncCommands = this.redisClient.sync();
+
         String connectionKey = connectionIdToKey(connectionId);
         boolean success = syncCommands.hsetnx(connectionKey, CREATED_AT, "" + System.currentTimeMillis());
 
@@ -101,6 +113,8 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     public void closeConnection(String connectionId) throws SubscriptionException {
         assert connectionId != null;
 
+        this.logger.info("closing connection {} ", connectionId);
+
         RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         String connectionKey = connectionIdToKey(connectionId);
@@ -109,10 +123,14 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                     connectionId));
         }
 
-        syncCommands.hkeys(connectionKey)
+        Set<String> remainingSubscriptionIds = syncCommands.hkeys(connectionKey)
                 .stream()
-                .filter(k -> !CREATED_AT.equals(k)) // don't include the created_at key
-                .forEach(k -> cancelSubscriptionInternal(connectionId, k)); // cancel all remaining subscriptions
+                .filter(k -> !CREATED_AT.equals(k))
+                .collect(Collectors.toSet());
+
+        this.logger.info("removing all remaining subscriptions {} ", remainingSubscriptionIds);
+
+        remainingSubscriptionIds.forEach(k -> cancelSubscriptionInternal(connectionId, k)); // cancel all remaining subscriptions
 
         syncCommands.del(connectionKey);
     }
@@ -144,6 +162,9 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         String connectionId = subscription.getConnectionId();
         String subscriptionId = subscription.getId();
         String connectionKey = connectionIdToKey(connectionId);
+
+        this.logger.info("creating subscription '{}' for connection '{}'", subscriptionId, connectionId);
+
         if (syncCommands.exists(connectionKey) == 0) {
             throw new SubscriptionException(String.format("Connection '%s' does not exist in the cache.",
                     connectionId));
@@ -193,6 +214,8 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         String connectionKey = connectionIdToKey(connectionId);
 
+        this.logger.info("cancelling subscription '{}' for connection '{}'", subscriptionId, connectionId);
+
         // adjust denormalized cache here
 
         // get all resources for this connection we need to keep
@@ -202,28 +225,43 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                 .flatMap(s -> s.getResources().stream())
                 .collect(Collectors.toSet());
 
+        this.logger.info("resources to keep: {}", resourcesToKeep);
+
         // get all resources for this subscription and subtract the resources we need to keep
         Subscription subscriptionToRemove = this.getSubscription(connectionId, subscriptionId);
-        Set<String> resourcesToDissociate = subscriptionToRemove.getResources();
-        resourcesToDissociate.removeAll(resourcesToKeep);
+        Set<String> resourcesToDisassociate = subscriptionToRemove.getResources();
+        resourcesToDisassociate.removeAll(resourcesToKeep);
 
-        // get key value pairs for name-spaced resources (ie. "user-<user-id>" or "athlete-<athlete-id>")
-        Map<String, String> modifiedConnectionJsonListByResourceId =
-                syncCommands.mget(resourcesToDissociate.toArray(String[]::new)).stream()
-                        .map(kv -> KeyValue.just(kv.getKey(), jsonStringToSet(kv.getValue())))
-                        .filter(kv -> kv.getValue().remove(connectionId) && !kv.getValue().isEmpty())
-                        .collect(Collectors.toMap(
-                                kv -> kv.getKey(),
-                                kv -> setToJsonString(kv.getValue())));
+        this.logger.info("resources to disassociate: {}", resourcesToDisassociate);
 
-        List<String> resourcesWithoutConnections = new ArrayList<>(resourcesToDissociate);
-        resourcesWithoutConnections.removeAll(modifiedConnectionJsonListByResourceId.keySet());
+        // if there are resources that are only associated to this connection by the subscription to delete, remove
+        // the connection from those resources.
+        if (!resourcesToDisassociate.isEmpty()) {
+            // get key value pairs for name-spaced resources (ie. "user-<user-id>" or "athlete-<athlete-id>")
+            Map<String, String> modifiedConnectionJsonListByResourceId =
+                    syncCommands.mget(resourcesToDisassociate.toArray(String[]::new)).stream()
+                            .map(kv -> KeyValue.just(kv.getKey(), jsonStringToSet(kv.getValue())))
+                            .filter(kv -> kv.getValue().remove(connectionId) && !kv.getValue().isEmpty())
+                            .collect(Collectors.toMap(
+                                    kv -> kv.getKey(),
+                                    kv -> setToJsonString(kv.getValue())));
 
-        // delete resource cache entries
-        syncCommands.del(resourcesWithoutConnections.toArray(String[]::new));
-        // modify resource cache entries
-        if (modifiedConnectionJsonListByResourceId.size() > 0) {
-            syncCommands.mset(modifiedConnectionJsonListByResourceId);
+            this.logger.info("modifiedConnectionJsonListByResourceId: {}", modifiedConnectionJsonListByResourceId);
+
+            List<String> resourcesWithoutConnections = new ArrayList<>(resourcesToDisassociate);
+
+            resourcesWithoutConnections.removeAll(modifiedConnectionJsonListByResourceId.keySet());
+            this.logger.info("resources without connections: {}", resourcesWithoutConnections);
+
+            // delete resource cache
+            if (resourcesWithoutConnections.size() > 0) {
+                syncCommands.del(resourcesWithoutConnections.toArray(String[]::new));
+            }
+            
+            // modify resource cache entries
+            if (modifiedConnectionJsonListByResourceId.size() > 0) {
+                syncCommands.mset(modifiedConnectionJsonListByResourceId);
+            }
         }
 
         syncCommands.hdel(connectionKey, subscriptionId);

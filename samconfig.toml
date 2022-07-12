@@ -10,4 +10,4 @@ confirm_changeset = false
 capabilities = "CAPABILITY_IAM"
 disable_rollback = false
 image_repositories = []
-parameter_overrides= 'VersionId=versionId StackNamespace=jf StackRegion=us-east-1 StackEnv=dev ApiGatewayStack=jf-dev-lds-api-gateway VpcStack=jf-dev-lds-vpc ApiGatewayStack:si-dev-lds-api-gateway KinesisStack=jf-dev-lds-kinesis RedisClusterStack=jf-dev-lds-elasticache-redis SecurityGroupStack=jf-dev-lds-client-sg'
+parameter_overrides= 'VersionId=versionId StackNamespace=jf StackRegion=us-east-1 StackEnv=dev ApiGatewayStack=jf-dev-lds-api-gateway VpcStack=jf-dev-lds-vpc ApiGatewayStack:si-dev-lds-api-gateway KinesisStack=jf-dev-lds-kinesis RedisStack=jf-dev-lds-elasticache-redis SecurityGroupStack=jf-dev-lds-client-sg'

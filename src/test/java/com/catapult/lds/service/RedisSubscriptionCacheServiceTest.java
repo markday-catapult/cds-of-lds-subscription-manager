@@ -4,8 +4,8 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
 import org.testng.Assert;
-import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.testng.collections.Sets;
 
@@ -19,8 +19,9 @@ public class RedisSubscriptionCacheServiceTest {
     /**
      * Clean up database before test
      */
-    @BeforeTest
+    @BeforeMethod
     void beforeTest() {
+        System.out.println("Cleaning cache");
         String host = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_NAME);
         String port = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_PORT);
         RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
@@ -28,7 +29,7 @@ public class RedisSubscriptionCacheServiceTest {
         redisClient.sync().flushall();
     }
 
-    @AfterTest
+    @AfterMethod
     void afterTest() {
         String host = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_NAME);
         String port = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_PORT);
@@ -183,6 +184,38 @@ public class RedisSubscriptionCacheServiceTest {
         Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath3Id)).get(ath3Id).size(), 1);
         Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath4Id)).get(ath4Id).size(), 1);
         Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath5Id)).get(ath5Id).size(), 0);
+
+    }
+
+    @Test
+    void testIdenticalSubscriptions() throws SubscriptionException {
+        SubscriptionCacheService cacheService = RedisSubscriptionCacheService.instance;
+
+        String trainer1ConnectionId = "trainer-1-connection-id";
+        String ath1Id = "athlete-1-id";
+        String ath2Id = "athlete-2-id";
+
+        Subscription sub1 = new Subscription(trainer1ConnectionId, Sets.newHashSet(ath1Id, ath2Id));
+        Subscription sub2 = new Subscription(trainer1ConnectionId, Sets.newHashSet(ath1Id, ath2Id));
+        Subscription sub3 = new Subscription(trainer1ConnectionId, Sets.newHashSet(ath1Id, ath2Id));
+
+        cacheService.createConnection(trainer1ConnectionId);
+        cacheService.putSubscription(sub1);
+        cacheService.putSubscription(sub2);
+        cacheService.putSubscription(sub3);
+
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath1Id)).get(ath1Id).size(), 1);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath2Id)).get(ath2Id).size(), 1);
+
+        cacheService.cancelSubscription(sub1.getConnectionId(), sub1.getId());
+
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath1Id)).get(ath1Id).size(), 1);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath2Id)).get(ath2Id).size(), 1);
+
+        cacheService.closeConnection(sub2.getConnectionId());
+
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath1Id)).get(ath1Id).size(), 0);
+        Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath2Id)).get(ath2Id).size(), 0);
 
     }
 
