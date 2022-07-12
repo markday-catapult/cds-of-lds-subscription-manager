@@ -10,6 +10,8 @@ import com.catapult.lds.service.SubscriptionException;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
 import java.util.Collection;
@@ -37,26 +39,44 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
+     * The logger used by this handler.
+     *
+     * @invariant logger != null
+     */
+    private final Logger logger = LoggerFactory.getLogger(SubscribeRequestHandler.class);
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent event, Context context) {
 
+        if (event == null || event.getRequestContext() == null) {
+            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+            response.setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR);
+            response.setBody("request context was not defined");
+            return response;
+        }
+
         final String connectionId;
         final SubscriptionRequest subscriptionRequest;
 
+        connectionId = event.getRequestContext().getConnectionId();
+
+        if (connectionId == null) {
+            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+            response.setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR);
+            response.setBody("connectionId was not defined");
+            return response;
+        }
+
+        logger.debug("Received subscribe request from connection: '{}'", connectionId);
+
         // Deserialize and validate the request
         try {
-            connectionId = event.getRequestContext().getConnectionId();
-            context.getLogger().log("Creating subscritpion for connection " + connectionId);
-
             subscriptionRequest = SubscribeRequestHandler.objectMapper.readValue(event.getBody(),
                     SubscriptionRequest.class);
 
-            if (connectionId == null) {
-                return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
-                        subscriptionRequest.requestId, "connectionId was not defined");
-            }
             if (subscriptionRequest.requestId == null || subscriptionRequest.resources == null || subscriptionRequest.resources.size() == 0) {
                 return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
                         subscriptionRequest.requestId, "Subscription request missing required fields");

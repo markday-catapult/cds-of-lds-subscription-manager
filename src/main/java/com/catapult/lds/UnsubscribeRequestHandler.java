@@ -9,6 +9,8 @@ import com.catapult.lds.service.SubscriptionException;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
 
@@ -33,34 +35,54 @@ public class UnsubscribeRequestHandler implements RequestHandler<APIGatewayV2Web
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
+     * The logger used by this handler.
+     *
+     * @invariant logger != null
+     */
+    private final Logger logger = LoggerFactory.getLogger(UnsubscribeRequestHandler.class);
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent event, Context context) {
 
-        final String connectionId;
+        if (event == null || event.getRequestContext() == null) {
+            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+            response.setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR);
+            response.setBody("request context was not defined");
+            return response;
+        }
+
+        String connectionId = event.getRequestContext().getConnectionId();
+        if (connectionId == null) {
+            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+            response.setStatusCode(HttpURLConnection.HTTP_BAD_REQUEST);
+            response.setBody("connectionId was not defined");
+            return response;
+        }
+
+        logger.debug("Received unsubscribe request from connection: '{}'", connectionId);
+
         final UnsubscribeRequest unsubscribeRequest;
 
         // Deserialize and validate the request
         try {
-            connectionId = event.getRequestContext().getConnectionId();
             unsubscribeRequest = UnsubscribeRequestHandler.objectMapper.readValue(event.getBody(),
                     UnsubscribeRequest.class);
 
-            if (connectionId == null) {
-                return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
-                        unsubscribeRequest.requestId, "connectionId was not defined");
-            }
-            if (unsubscribeRequest.requestId == null || unsubscribeRequest.subscriptionId == null) {
-                return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
-                        unsubscribeRequest.requestId, "Unsubscribe request missing required fields");
-            }
         } catch (JsonProcessingException e) {
             return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST, null, e.getMessage());
         }
 
+        if (unsubscribeRequest.requestId == null || unsubscribeRequest.subscriptionId == null) {
+            return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
+                    unsubscribeRequest.requestId, "Unsubscribe request missing required fields ");
+        }
+
         // process the request
         String subscriptionId = unsubscribeRequest.subscriptionId;
+        logger.debug("Cancelling subscription: '{}'", subscriptionId);
         try {
             subscriptionCacheService.cancelSubscription(connectionId, subscriptionId);
 

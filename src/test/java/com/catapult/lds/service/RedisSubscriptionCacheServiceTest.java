@@ -3,6 +3,8 @@ package com.catapult.lds.service;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -17,13 +19,20 @@ import java.util.UUID;
 public class RedisSubscriptionCacheServiceTest {
 
     /**
+     * The logger used by this handler.
+     *
+     * @invariant logger != null
+     */
+    private final Logger logger = LoggerFactory.getLogger(RedisSubscriptionCacheServiceTest.class);
+
+    /**
      * Clean up database before test
      */
     @BeforeMethod
     void beforeTest() {
-        System.out.println("Cleaning cache");
-        String host = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_NAME);
-        String port = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_PORT);
+        logger.info("Cleaning cache");
+        String host = System.getenv(RedisSubscriptionCacheService.LDS_REDIS_HOST_ENV);
+        String port = System.getenv(RedisSubscriptionCacheService.LDS_REDIS_PORT_ENV);
         RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
         StatefulRedisConnection<String, String> redisClient = RedisClient.create(redisURI).connect();
         redisClient.sync().flushall();
@@ -31,12 +40,12 @@ public class RedisSubscriptionCacheServiceTest {
 
     @AfterMethod
     void afterTest() {
-        String host = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_NAME);
-        String port = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_PORT);
+        String host = System.getenv(RedisSubscriptionCacheService.LDS_REDIS_HOST_ENV);
+        String port = System.getenv(RedisSubscriptionCacheService.LDS_REDIS_PORT_ENV);
         RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
         StatefulRedisConnection<String, String> redisClient = RedisClient.create(redisURI).connect();
         List<String> keys = redisClient.sync().keys("*");
-        System.out.println("==========================");
+        logger.info("==========================");
         keys.forEach(k -> System.out.println(k + ": " + (redisClient.sync().type(k).equals("string") ?
                 redisClient.sync().get(k) : redisClient.sync().hgetall(k))));
     }

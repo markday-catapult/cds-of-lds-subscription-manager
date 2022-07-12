@@ -83,9 +83,9 @@ Resources:
       VpcConfig:
         SecurityGroupIds:
           - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
-        SubnetIds:
-          - Fn::ImportValue: !Sub '${VpcStack}:subnet-a-private'
-          - Fn::ImportValue: !Sub '${VpcStack}:subnet-b-private'
+        SubnetIds: !Split
+          - ','
+          - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
       Environment:
         Variables:
           EXECUTE_ARN: !Join
@@ -133,9 +133,9 @@ Resources:
       VpcConfig:
         SecurityGroupIds:
           - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
-        SubnetIds:
-          - Fn::ImportValue: !Sub '${VpcStack}:subnet-a-private'
-          - Fn::ImportValue: !Sub '${VpcStack}:subnet-b-private'
+        SubnetIds: !Split
+          - ','
+          - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
       Environment:
         Variables:
           LDS_REDIS_HOST:
@@ -205,9 +205,9 @@ Resources:
       VpcConfig:
         SecurityGroupIds:
           - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
-        SubnetIds:
-          - Fn::ImportValue: !Sub '${VpcStack}:subnet-a-private'
-          - Fn::ImportValue: !Sub '${VpcStack}:subnet-b-private'
+        SubnetIds: !Split
+          - ','
+          - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
       Environment:
         Variables:
           LDS_REDIS_HOST:
@@ -275,9 +275,9 @@ Resources:
       VpcConfig:
         SecurityGroupIds:
           - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
-        SubnetIds:
-          - Fn::ImportValue: !Sub '${VpcStack}:subnet-a-private'
-          - Fn::ImportValue: !Sub '${VpcStack}:subnet-b-private'
+        SubnetIds: !Split
+          - ','
+          - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
       Environment:
         Variables:
           LDS_REDIS_HOST:
@@ -345,9 +345,9 @@ Resources:
       VpcConfig:
         SecurityGroupIds:
           - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
-        SubnetIds:
-          - Fn::ImportValue: !Sub '${VpcStack}:subnet-a-private'
-          - Fn::ImportValue: !Sub '${VpcStack}:subnet-b-private'
+        SubnetIds: !Split
+          - ','
+          - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
       Environment:
         Variables:
           LDS_REDIS_HOST:

@@ -8,6 +8,8 @@ import com.catapult.lds.authorization.Response;
 import com.catapult.lds.authorization.Statement;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -45,27 +47,48 @@ public class ConnectAuthorizationHandler implements RequestHandler<APIGatewayPro
     public static final String EXECUTE_ARN_ENV = "EXECUTE_ARN";
 
     /**
+     * The logger used by this handler.
+     *
+     * @invariant logger != null
+     */
+    private final Logger logger = LoggerFactory.getLogger(ConnectAuthorizationHandler.class);
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public Response handleRequest(APIGatewayProxyRequestEvent event, Context context) {
-        Map<String, String> headers = event.getHeaders();
-
-        context.getLogger().log("Received Authorization request: " + event);
-
-        String authorizationToken = headers.get(AUTHORIZATION_HEADER);
         Map<String, String> responseContext = new HashMap<String, String>();
 
-        context.getLogger().log("Auth token: " + authorizationToken);
-
-        if (authorizationToken == null || authorizationToken.isEmpty()) {
-            return getPolicy(event, POLICY_ACTION_DENY, responseContext, context);
+        if (event == null ||
+                event.getRequestContext() == null ||
+                event.getRequestContext().getIdentity() == null ||
+                event.getRequestContext().getIdentity().getAccountId() == null
+        ) {
+            responseContext.put("event", "invalid event");
+            return getPolicy("<no account id>", POLICY_ACTION_DENY, responseContext);
         }
 
-        context.getLogger().log("Contains Bearer Token: " + authorizationToken.contains(BEARER_TOKEN));
+        APIGatewayProxyRequestEvent.ProxyRequestContext proxyContext = event.getRequestContext();
+        APIGatewayProxyRequestEvent.RequestIdentity identity = proxyContext.getIdentity();
+        String accountId = identity.getAccountId();
+
+        Map<String, String> headers = event.getHeaders();
+
+        logger.debug("Received Authorization request: {} ", event);
+
+        String authorizationToken = headers.get(AUTHORIZATION_HEADER);
+
+        logger.debug("Auth token: '{}'" + authorizationToken);
+
+        if (authorizationToken == null || authorizationToken.isEmpty()) {
+            return getPolicy(accountId, POLICY_ACTION_DENY, responseContext);
+        }
+
+        logger.debug("Bearer Token: {}", authorizationToken.contains(BEARER_TOKEN));
 
         if (!authorizationToken.contains(BEARER_TOKEN)) {
-            return getPolicy(event, POLICY_ACTION_DENY, responseContext, context);
+            return getPolicy(accountId, POLICY_ACTION_DENY, responseContext);
         }
 
         String token = authorizationToken.substring(BEARER_TOKEN.length());
@@ -74,13 +97,10 @@ public class ConnectAuthorizationHandler implements RequestHandler<APIGatewayPro
 
         responseContext.put("authorization", authorizationToken);
 
-        return getPolicy(event, POLICY_ACTION_ALLOW, responseContext, context);
+        return getPolicy(accountId, POLICY_ACTION_ALLOW, responseContext);
     }
 
-    private Response getPolicy(APIGatewayProxyRequestEvent event, String effect, Map<String, String> responseContext,
-                               Context context) {
-        APIGatewayProxyRequestEvent.ProxyRequestContext proxyContext = event.getRequestContext();
-        APIGatewayProxyRequestEvent.RequestIdentity identity = proxyContext.getIdentity();
+    private Response getPolicy(String accountId, String effect, Map<String, String> responseContext) {
 
         String arn = System.getenv(EXECUTE_ARN_ENV);
 
@@ -96,13 +116,13 @@ public class ConnectAuthorizationHandler implements RequestHandler<APIGatewayPro
         ObjectMapper mapper = new ObjectMapper();
 
         try {
-            context.getLogger().log("Policy document: " + mapper.writeValueAsString(policyDocument));
+            logger.info("Policy document: " + mapper.writeValueAsString(policyDocument));
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
 
         return Response.builder()
-                .principalId(identity.getAccountId())
+                .principalId(accountId)
                 .policyDocument(policyDocument)
                 .context(responseContext)
                 .build();

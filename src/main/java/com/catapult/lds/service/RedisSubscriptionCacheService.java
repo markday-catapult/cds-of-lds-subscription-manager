@@ -21,6 +21,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * {@code RedisSubscriptionCacheService} is an implementation of {@code SubscriptionCacheService} that is backed by a
+ * redis instance.
+ */
 public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
     public static SubscriptionCacheService instance = new RedisSubscriptionCacheService();
@@ -28,18 +32,23 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     /**
      * The name of the environment variable which has a value of the url of the redis cluster.
      */
-    public final static String CLUSTER_ENV_NAME = "LDS_REDIS_HOST";
+    public final static String LDS_REDIS_HOST_ENV = "LDS_REDIS_HOST";
 
     /**
      * The name of the environment variable which has a value of the url of the redis cluster port.
      */
-    public final static String CLUSTER_ENV_PORT = "LDS_REDIS_PORT";
+    public final static String LDS_REDIS_PORT_ENV = "LDS_REDIS_PORT";
 
     /**
      * The name of the key which has a value of the timestamp that a hash value was created at.
      */
     private final static String CREATED_AT = "created_at";
 
+    /**
+     * The object mapper used by this service.
+     *
+     * @invariant objectMapper != null
+     */
     private final static ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -50,7 +59,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     private final StatefulRedisConnection<String, String> redisClient;
 
     /**
-     * The logger used by all instances of this handler.
+     * The logger used by this cache service.
      *
      * @invariant logger != null
      */
@@ -58,8 +67,8 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
     private RedisSubscriptionCacheService() {
 
-        String host = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_NAME);
-        String port = System.getenv(RedisSubscriptionCacheService.CLUSTER_ENV_PORT);
+        String host = System.getenv(RedisSubscriptionCacheService.LDS_REDIS_HOST_ENV);
+        String port = System.getenv(RedisSubscriptionCacheService.LDS_REDIS_PORT_ENV);
         RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
 
         this.redisClient = RedisClient.create(redisURI).connect();
@@ -257,7 +266,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
             if (resourcesWithoutConnections.size() > 0) {
                 syncCommands.del(resourcesWithoutConnections.toArray(String[]::new));
             }
-            
+
             // modify resource cache entries
             if (modifiedConnectionJsonListByResourceId.size() > 0) {
                 syncCommands.mset(modifiedConnectionJsonListByResourceId);
@@ -265,23 +274,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         }
 
         syncCommands.hdel(connectionKey, subscriptionId);
-    }
-
-    Set<String> jsonStringToSet(String jsonArrayString) {
-        try {
-            return objectMapper.readValue(jsonArrayString, new TypeReference<HashSet<String>>() {
-            });
-        } catch (JsonProcessingException e) {
-            throw new AssertionError(e.getMessage());
-        }
-    }
-
-    String setToJsonString(Set<String> set) {
-        try {
-            return objectMapper.writeValueAsString(set);
-        } catch (JsonProcessingException e) {
-            throw new AssertionError(e.getMessage());
-        }
     }
 
     /**
@@ -357,6 +349,38 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      */
     private String connectionIdToKey(String connectionId) {
         assert connectionId != null;
+        
         return CONNECTION_NAMESPACE + connectionId;
+    }
+
+    /**
+     * Helper method that converts the given stringified json array to a set of Strings
+     *
+     * @pre jsonArrayString != null
+     * @post return != null
+     */
+    private static Set<String> jsonStringToSet(String jsonArrayString) {
+        assert jsonArrayString != null;
+
+        try {
+            return objectMapper.readValue(jsonArrayString, new TypeReference<HashSet<String>>() {
+            });
+        } catch (JsonProcessingException e) {
+            throw new AssertionError(e.getMessage());
+        }
+    }
+
+    /**
+     * Helper method that converts the given set of strings to a stringified json array.
+     *
+     * @pre set != null
+     * @post return != null
+     */
+    private static String setToJsonString(Set<String> set) {
+        try {
+            return objectMapper.writeValueAsString(set);
+        } catch (JsonProcessingException e) {
+            throw new AssertionError(e.getMessage());
+        }
     }
 }

@@ -6,6 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
 import com.catapult.lds.service.SubscriptionCacheService;
 import com.catapult.lds.service.SubscriptionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
 
@@ -22,10 +24,24 @@ public class DisconnectHandler implements RequestHandler<APIGatewayV2WebSocketEv
     private static final SubscriptionCacheService subscriptionCacheService = Util.cacheService;
 
     /**
+     * The logger used by this handler.
+     *
+     * @invariant logger != null
+     */
+    private final Logger logger = LoggerFactory.getLogger(DisconnectHandler.class);
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent event, Context context) {
+
+        if (event == null || event.getRequestContext() == null) {
+            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+            response.setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR);
+            response.setBody("request context was not defined");
+            return response;
+        }
 
         String connectionId = event.getRequestContext().getConnectionId();
         if (connectionId == null) {
@@ -35,15 +51,16 @@ public class DisconnectHandler implements RequestHandler<APIGatewayV2WebSocketEv
             return response;
         }
 
+        logger.debug("Disconnecting connection: '{}'", connectionId);
+        
         try {
             subscriptionCacheService.closeConnection(connectionId);
-            context.getLogger().log("connection closed.  Connection id: " + connectionId);
             APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
             response.setStatusCode(HttpURLConnection.HTTP_NO_CONTENT);
             response.setBody("ok");
             return response;
         } catch (SubscriptionException e) {
-            context.getLogger().log(e.getMessage());
+            logger.debug(e.getMessage());
             APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
             response.setStatusCode(HttpURLConnection.HTTP_GONE);
             response.setBody(e.getMessage());

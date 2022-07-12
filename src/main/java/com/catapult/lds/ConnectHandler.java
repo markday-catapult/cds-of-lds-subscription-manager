@@ -6,6 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
 import com.catapult.lds.service.SubscriptionCacheService;
 import com.catapult.lds.service.SubscriptionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
 
@@ -22,10 +24,24 @@ public class ConnectHandler implements RequestHandler<APIGatewayV2WebSocketEvent
     private static final SubscriptionCacheService subscriptionCacheService = Util.cacheService;
 
     /**
+     * The logger used by this handler.
+     *
+     * @invariant logger != null
+     */
+    private final Logger logger = LoggerFactory.getLogger(ConnectHandler.class);
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public APIGatewayV2WebSocketResponse handleRequest(APIGatewayV2WebSocketEvent event, Context context) {
+
+        if (event == null || event.getRequestContext() == null) {
+            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+            response.setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR);
+            response.setBody("request context was not defined");
+            return response;
+        }
 
         try {
             String connectionId = event.getRequestContext().getConnectionId();
