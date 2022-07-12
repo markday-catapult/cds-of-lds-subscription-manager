@@ -62,8 +62,7 @@ public class ConnectAuthorizationHandler implements RequestHandler<APIGatewayPro
 
         if (event == null ||
                 event.getRequestContext() == null ||
-                event.getRequestContext().getIdentity() == null ||
-                event.getRequestContext().getIdentity().getAccountId() == null
+                event.getRequestContext().getIdentity() == null
         ) {
             responseContext.put("event", "invalid event");
             return getPolicy("<no account id>", POLICY_ACTION_DENY, responseContext);
