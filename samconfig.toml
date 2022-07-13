@@ -2,12 +2,12 @@ version = 0.1
 [jf-dev]
 [jf-dev.deploy]
 [jf-dev.deploy.parameters]
-stack_name = "jf-dev-subscription-function-stack"
-s3_bucket = "lambda-deployables-lds-us-east-1"
+stack_name = "si-dev-subscription-function-stack"
+s3_bucket = "lambda-deployables-lds"
 s3_prefix = "subscription-function"
-region = "us-east-1"
+region = "ap-southeast-2"
 confirm_changeset = false
 capabilities = "CAPABILITY_IAM"
 disable_rollback = false
 image_repositories = []
-parameter_overrides= 'VersionId=versionId StackNamespace=jf StackRegion=us-east-1 StackEnv=dev ApiGatewayStack=jf-dev-lds-api-gateway VpcStack=jf-dev-lds-vpc ApiGatewayStack:si-dev-lds-api-gateway KinesisStack=jf-dev-lds-kinesis RedisStack=jf-dev-lds-elasticache-redis SecurityGroupStack=jf-dev-lds-client-sg'
+parameter_overrides= 'VersionId=versionId StackNamespace=si StackRegion=ap-southeast-2 StackEnv=dev ApiGatewayStack=si-dev-lds-api-gateway VpcStack=si-dev-lds-vpc ApiGatewayStack:si-dev-lds-api-gateway KinesisStack=si-dev-lds-kinesis RedisStack=si-dev-lds-elasticache-redis SecurityGroupStack=si-dev-lds-client-sg'
