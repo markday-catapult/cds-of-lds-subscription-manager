@@ -47,7 +47,7 @@ To make sure we don't clobber other's stacks while testing, please set up a name
 ```shell
 export STACK_NAMESPACE=<YOUR INITIALS HERE>
 export STACK_ENV=dev
-export STACK_ENV=<YOUR REGION HERE>
+export STACK_REGION=<YOUR REGION HERE>
 ```
 
 ```shell
