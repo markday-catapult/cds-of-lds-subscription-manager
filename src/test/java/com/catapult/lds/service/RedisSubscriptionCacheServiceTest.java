@@ -46,7 +46,7 @@ public class RedisSubscriptionCacheServiceTest {
         StatefulRedisConnection<String, String> redisClient = RedisClient.create(redisURI).connect();
         List<String> keys = redisClient.sync().keys("*");
         logger.info("==========================");
-        keys.forEach(k -> System.out.println(k + ": " + (redisClient.sync().type(k).equals("string") ?
+        keys.forEach(k -> logger.info(k + ": " + (redisClient.sync().type(k).equals("string") ?
                 redisClient.sync().get(k) : redisClient.sync().hgetall(k))));
     }
 
