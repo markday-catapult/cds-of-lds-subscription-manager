@@ -42,15 +42,32 @@ samconfig.toml
 
 ### Sam Deployment
 
+To make sure we don't clobber other's stacks while testing, please set up a namespace for your template to run:
+
+```shell
+export STACK_NAMESPACE=<YOUR INITIALS HERE>
+export STACK_ENV=dev
+export STACK_ENV=<YOUR REGION HERE>
+```
+
 ```shell
 $ sam build -t sam.yml 
 $ sam package 
    --output-template-file packaged.yaml \
-   --s3-bucket lambda-deployables-lds \
+   --s3-bucket lambda-deployables-lds-${STACK_REGION} \
    --s3-prefix subscription-function  \
    --force-upload 
-$ sam deploy 
+$ sam deploy \
     --template-file packaged.yaml  \
-    --config-env jf-dev \
-    --stack-name jf-dev-subscription-function-stack
+    --capabilities CAPABILITY_NAMED_IAM               \
+    --stack-name "${STACK_NAMESPACE}-${STACK_ENV}-subscription-function-stack" \
+    --region ${STACK_REGION}                           \
+    --parameter-overrides                                 \
+       StackNamespace=${STACK_NAMESPACE}                      \
+       VersionId=`git rev-parse --short HEAD`           \
+       StackEnv=${STACK_ENV}                            \
+       VpcStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-vpc       \
+       ApiGatewayStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-api-gateway       \
+       RedisStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-elasticache-redis       \
+       SecurityGroupStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-client-sg       
 ```
