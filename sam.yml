@@ -78,6 +78,8 @@ Resources:
       PackageType: Zip
       Runtime: java11
       MemorySize: 1024
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions: 2
       Timeout: 10
       Tracing: Active
       VpcConfig:
@@ -128,6 +130,8 @@ Resources:
       PackageType: Zip
       Runtime: java11
       MemorySize: 1024
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions: 2
       Timeout: 10
       Tracing: Active
       VpcConfig:
@@ -200,6 +204,8 @@ Resources:
       PackageType: Zip
       Runtime: java11
       MemorySize: 1024
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions: 2
       Timeout: 10
       Tracing: Active
       VpcConfig:
@@ -270,6 +276,8 @@ Resources:
       PackageType: Zip
       Runtime: java11
       MemorySize: 1024
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions: 1
       Timeout: 10
       Tracing: Active
       VpcConfig:
@@ -340,6 +348,8 @@ Resources:
       PackageType: Zip
       Runtime: java11
       MemorySize: 1024
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions: 1
       Timeout: 10
       Tracing: Active
       VpcConfig:
