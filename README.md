@@ -52,13 +52,15 @@ export STACK_ENV=<YOUR REGION HERE>
 
 ```shell
 $ sam build -t sam.yml 
-$ sam package 
+$ sam package \
    --output-template-file packaged.yaml \
-   --s3-bucket lambda-deployables-lds-${STACK_REGION} \
+   --s3-bucket "lambda-deployables-lds-${STACK_REGION}" \
    --s3-prefix subscription-function  \
    --force-upload 
 $ sam deploy \
     --template-file packaged.yaml  \
+    --s3-bucket "lambda-deployables-lds-${STACK_REGION}" \
+    --s3-prefix subscription-function  \
     --capabilities CAPABILITY_NAMED_IAM               \
     --stack-name "${STACK_NAMESPACE}-${STACK_ENV}-subscription-function-stack" \
     --region ${STACK_REGION}                           \
