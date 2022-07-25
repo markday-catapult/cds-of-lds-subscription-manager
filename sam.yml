@@ -13,7 +13,6 @@
 #       ApiGatewayStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-api-gateway \
 #       KinesisStack={STACK_NAMESPACE}-${STACK_ENV}-lds-kinesis \
 #       RedisStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-elasticache-redis \
-#       SecurityGroupStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-client-sg \
 #       VersionId=`git rev-parse --short HEAD`
 
 
@@ -21,7 +20,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 
 Transform: 'AWS::Serverless-2016-10-31'
 
-Description: Demuxer lambda
+Description: Subscription Service Stack
 
 Parameters:
   StackNamespace:
@@ -54,9 +53,6 @@ Parameters:
   RedisStack:
     Description: 'The name of the redis cluster stack.'
     Type: String
-  SecurityGroupStack:
-    Description: 'The name of the security stack.'
-    Type: String
 
 Conditions:
   UseStackNamespace: !Or [ !Equals [ !Ref StackEnv, "dev" ], !Equals [ !Ref StackEnv, "test" ] ]
@@ -84,10 +80,10 @@ Resources:
       Tracing: Active
       VpcConfig:
         SecurityGroupIds:
-          - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
+          - Fn::ImportValue: !Sub '${VpcStack}:client-security-group'
         SubnetIds: !Split
           - ','
-          - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
+          - Fn::ImportValue: !Sub '${VpcStack}:private-subnets'
       Environment:
         Variables:
           EXECUTE_ARN: !Join
@@ -136,7 +132,7 @@ Resources:
       Tracing: Active
       VpcConfig:
         SecurityGroupIds:
-          - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
+          - Fn::ImportValue: !Sub '${VpcStack}:client-security-group'
         SubnetIds: !Split
           - ','
           - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
@@ -210,7 +206,7 @@ Resources:
       Tracing: Active
       VpcConfig:
         SecurityGroupIds:
-          - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
+          - Fn::ImportValue: !Sub '${VpcStack}:client-security-group'
         SubnetIds: !Split
           - ','
           - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
@@ -282,7 +278,7 @@ Resources:
       Tracing: Active
       VpcConfig:
         SecurityGroupIds:
-          - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
+          - Fn::ImportValue: !Sub '${VpcStack}:client-security-group'
         SubnetIds: !Split
           - ','
           - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
@@ -354,7 +350,7 @@ Resources:
       Tracing: Active
       VpcConfig:
         SecurityGroupIds:
-          - Fn::ImportValue: !Sub '${SecurityGroupStack}:client-security-group'
+          - Fn::ImportValue: !Sub '${VpcStack}:client-security-group'
         SubnetIds: !Split
           - ','
           - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'

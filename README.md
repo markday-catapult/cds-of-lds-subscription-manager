@@ -54,15 +54,15 @@ export STACK_REGION=<YOUR REGION HERE>
 $ sam build -t sam.yml 
 $ sam package \
    --output-template-file packaged.yaml \
-   --s3-bucket "lambda-deployables-lds-${STACK_REGION}" \
-   --s3-prefix subscription-function  \
+   --s3-bucket "lambda-deploy-lds-${STACK_REGION}" \
+   --s3-prefix subscription-manager  \
    --force-upload 
 $ sam deploy \
     --template-file packaged.yaml  \
-    --s3-bucket "lambda-deployables-lds-${STACK_REGION}" \
-    --s3-prefix subscription-function  \
+    --s3-bucket "lambda-deploy-lds-${STACK_REGION}" \
+    --s3-prefix subscription-manager  \
     --capabilities CAPABILITY_NAMED_IAM               \
-    --stack-name "${STACK_NAMESPACE}-${STACK_ENV}-subscription-function-stack" \
+    --stack-name "${STACK_NAMESPACE}-${STACK_ENV}-subscription-manager" \
     --region ${STACK_REGION}                           \
     --parameter-overrides                                 \
        StackNamespace=${STACK_NAMESPACE}                      \
@@ -70,6 +70,5 @@ $ sam deploy \
        StackEnv=${STACK_ENV}                            \
        VpcStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-vpc       \
        ApiGatewayStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-api-gateway       \
-       RedisStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-elasticache-redis       \
-       SecurityGroupStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-client-sg       
+       RedisStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-elasticache-redis             
 ```
