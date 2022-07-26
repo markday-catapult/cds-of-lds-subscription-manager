@@ -42,10 +42,10 @@ Example:
 ```json
 
 {
-  "$connection-id:unique-connection-id-1": {
+  "$connection-id:connection-id-1": {
     "created_at": "1658858886356",
-    "<SUBSCRIPTION_ID_1>": "[\"ts:device:unique-dev-id-1\",\"ts:device:unique-dev-id-2\"]",
-    "<SUBSCRIPTION_ID_2>": "[\"ts:athlete:unique-ath-id-1\",\"ts:user:unique-user-id-1\"]"
+    "<SUBSCRIPTION_ID_1>": "[\"ts:device:dev-id-1\",\"ts:device:dev-id-2\"]",
+    "<SUBSCRIPTION_ID_2>": "[\"ts:athlete:ath-id-1\",\"ts:user:user-id-1\"]"
   }
 }
 
@@ -54,9 +54,14 @@ Example:
 #### The Denormalized Cache
 
 The denormalized cache consists of key/value pairs of strings with the key being a namespaced resource id, and the value
-being a stringified json list of strings where each string is a comma separated list with the first value being a
-connection id, and the remaining values being a list of subscription id for that connection that are subscribed to that
-resource.
+being a stringified json list of objects. Each object contains two key/value pairs
+
+```json 
+{
+  "connectionId": "connection-id-abc",
+  "subscriptionIds": ["subscription-id-123","subscription-id-456"]
+}
+```
 
 The Resource Namespace consists of three parts - a data class (used to disambiguate a resource that may appear in
 multiple data classes), a resource type, and a unique resource id. The key is a concatenation of all three parts in the
@@ -67,7 +72,7 @@ listed order. All three parts must be present.
     - `su` - summary data
 - Resource Type
     - `user`
-    - `devicde`
+    - `device`
     - `athlete`
     - `field`
     - `period`
@@ -78,8 +83,8 @@ Example:
 ```json
 
 {
-  "ts:device-id:unique-device-id-1": "[\"unique-connection-id-1,unique-sub-1,unique-sub-2\",\"unique-connection-id-2,unique-sub-3,unique-sub-4\"]",
-  "ts:device-id:unique-athlete-id-1": "[\"unique-connection-id-1,unique-sub-2\",\"unique-connection-id-3,unique-sub-5,unique-sub-6\"]"
+  "ts:device:dev_id_123": "[{\"connectionId\":\"connection-id-abc\",\"subscriptionIds\":[\"subscription-id-123\",\"subscription-id-456\"]},{\"connectionId\":\"connection-id-lmn\",\"subscriptionIds\":[\"subscription-id-545\",\"subscription-id-767\"]}]",
+  "ts:athlete:ath_id_783": "[{\"connectionId\":\"connection-id-lmn\",\"subscriptionIds\":[\"subscription-id-988\",\"subscription-id-767\"]}]"
 }
 
 ```
