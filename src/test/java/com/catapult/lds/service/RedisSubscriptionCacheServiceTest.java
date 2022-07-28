@@ -19,7 +19,7 @@ import java.util.UUID;
 public class RedisSubscriptionCacheServiceTest {
 
     /**
-     * The logger used by this handler.
+     * The logger used by this test.
      *
      * @invariant logger != null
      */
@@ -225,7 +225,6 @@ public class RedisSubscriptionCacheServiceTest {
 
         Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath1Id)).get(ath1Id).size(), 0);
         Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath2Id)).get(ath2Id).size(), 0);
-
     }
 
 }
