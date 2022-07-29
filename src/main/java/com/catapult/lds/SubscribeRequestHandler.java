@@ -92,7 +92,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
             if (subscriptionRequest.requestId == null ||
                     subscriptionRequest.dataClass == null ||
                     subscriptionRequest.resources == null ||
-                    subscriptionRequest.resources.size() == 0) {
+                    subscriptionRequest.resources.isEmpty()) {
                 return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
                         subscriptionRequest.requestId, "Subscription request missing required fields");
             }
