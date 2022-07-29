@@ -19,7 +19,7 @@ import java.util.UUID;
 public class RedisSubscriptionCacheServiceTest {
 
     /**
-     * The logger used by this handler.
+     * The logger used by this test.
      *
      * @invariant logger != null
      */
@@ -46,7 +46,7 @@ public class RedisSubscriptionCacheServiceTest {
         StatefulRedisConnection<String, String> redisClient = RedisClient.create(redisURI).connect();
         List<String> keys = redisClient.sync().keys("*");
         logger.info("==========================");
-        keys.forEach(k -> System.out.println(k + ": " + (redisClient.sync().type(k).equals("string") ?
+        keys.forEach(k -> logger.info(k + ": " + (redisClient.sync().type(k).equals("string") ?
                 redisClient.sync().get(k) : redisClient.sync().hgetall(k))));
     }
 
@@ -225,7 +225,6 @@ public class RedisSubscriptionCacheServiceTest {
 
         Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath1Id)).get(ath1Id).size(), 0);
         Assert.assertEquals(cacheService.getConnectionIdsForResourceIds(Collections.singleton(ath2Id)).get(ath2Id).size(), 0);
-
     }
 
 }

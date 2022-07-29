@@ -10,6 +10,8 @@ import com.catapult.lds.service.SubscriptionException;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +25,16 @@ import java.util.stream.Collectors;
  * {@code SubscribeRequestHandler} is an implementation of {@link RequestHandler} that processes subscribe requests.
  */
 public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSocketEvent, APIGatewayV2WebSocketResponse> {
+
+    /**
+     * The pattern of a namespaced resource, with the parts
+     * <ul>
+     *     <li>data class</li>
+     *     <li>resource type</li>
+     *     <li>resource key</li>
+     * </ul>
+     */
+    public static final String NAMESPACED_RESOURCE_PATTERN = "%s:%s:%s";
 
     /**
      * The singleton {@code SubscriptionCacheService}
@@ -77,7 +89,10 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
             subscriptionRequest = SubscribeRequestHandler.objectMapper.readValue(event.getBody(),
                     SubscriptionRequest.class);
 
-            if (subscriptionRequest.requestId == null || subscriptionRequest.resources == null || subscriptionRequest.resources.size() == 0) {
+            if (subscriptionRequest.requestId == null ||
+                    subscriptionRequest.dataClass == null ||
+                    subscriptionRequest.resources == null ||
+                    subscriptionRequest.resources.isEmpty()) {
                 return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
                         subscriptionRequest.requestId, "Subscription request missing required fields");
             }
@@ -89,11 +104,17 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
         try {
             Set<String> resources = subscriptionRequest.resources.entrySet()
                     .stream()
-                    .map(e -> e.getValue().stream().map(s -> e.getKey() + "-" + s).collect(Collectors.toSet()))
+                    .map(e -> e.getValue().stream().map(s -> String.format("%s:%s:%s",
+                                    subscriptionRequest.dataClass,
+                                    e.getKey(),
+                                    s))
+                            .collect(Collectors.toSet()))
                     .flatMap(Set::stream)
                     .collect(Collectors.toSet());
 
             Subscription subscription = new Subscription(connectionId, resources);
+
+            // TODO: Authorize the subscription
 
             // Add the subscription
             subscriptionCacheService.putSubscription(subscription);
@@ -116,15 +137,18 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
      * {@code SubscriptionRequest} contains information needed to create a new subscription.
      */
     @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+    @Builder
+    @AllArgsConstructor
     public static class SubscriptionRequest {
         private String action;
+        private String dataClass;
         private String requestId;
         private Map<String, Collection<String>> resources;
 
         /**
          * Creates a new {@code SubscriptionRequest}.  For use by object mapper only
          */
-        SubscriptionRequest() {
+        public SubscriptionRequest() {
         }
 
         /**
@@ -137,6 +161,23 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
                     ", requestId='" + requestId + '\'' +
                     ", resources=" + resources +
                     '}';
+        }
+
+        /**
+         * Returns a set of namespaced resources for this subscription request.
+         *
+         * @invariant return != null
+         */
+        public Set<String> getNamespacedResources() {
+            return this.resources.entrySet()
+                    .stream()
+                    .map(e -> e.getValue().stream().map(s -> String.format(NAMESPACED_RESOURCE_PATTERN,
+                                    this.dataClass,
+                                    e.getKey(),
+                                    s))
+                            .collect(Collectors.toSet()))
+                    .flatMap(Set::stream)
+                    .collect(Collectors.toSet());
         }
     }
 }
