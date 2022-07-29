@@ -27,7 +27,12 @@ import java.util.stream.Collectors;
  */
 public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
-    public static SubscriptionCacheService instance = new RedisSubscriptionCacheService();
+    /**
+     * The singleton instance of the redis subscription cache service
+     *
+     * @invariant instance != null
+     */
+    public final static SubscriptionCacheService instance = new RedisSubscriptionCacheService();
 
     /**
      * The name of the environment variable which has a value of the url of the redis cluster.
@@ -52,6 +57,11 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     private final static ObjectMapper objectMapper = new ObjectMapper();
 
     /**
+     * The namespace for a connection key
+     */
+    private final static String CONNECTION_NAMESPACE = "$connection-id-";
+
+    /**
      * Connection to AWS Elasticache redis cluster
      *
      * @invariant redisClient != null
@@ -72,6 +82,37 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
 
         this.redisClient = RedisClient.create(redisURI).connect();
+    }
+
+    /**
+     * Helper method that converts the given stringified json array to a set of Strings
+     *
+     * @pre jsonArrayString != null
+     * @post return != null
+     */
+    private static Set<String> jsonStringToSet(String jsonArrayString) {
+        assert jsonArrayString != null;
+
+        try {
+            return objectMapper.readValue(jsonArrayString, new TypeReference<HashSet<String>>() {
+            });
+        } catch (JsonProcessingException e) {
+            throw new AssertionError(e.getMessage());
+        }
+    }
+
+    /**
+     * Helper method that converts the given set of strings to a stringified json array.
+     *
+     * @pre set != null
+     * @post return != null
+     */
+    private static String setToJsonString(Set<String> set) {
+        try {
+            return objectMapper.writeValueAsString(set);
+        } catch (JsonProcessingException e) {
+            throw new AssertionError(e.getMessage());
+        }
     }
 
     /**
@@ -209,6 +250,8 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         if (connectionsByResourceId.size() > 0) {
             syncCommands.mset(request);
         }
+
+        this.logger.info("sending request to cache: {}", request);
     }
 
     /**
@@ -339,8 +382,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         return connectionsByResourceId;
     }
 
-    private final static String CONNECTION_NAMESPACE = "$connection-id-";
-
     /**
      * Returns the key of the given connection id
      *
@@ -349,38 +390,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      */
     private String connectionIdToKey(String connectionId) {
         assert connectionId != null;
-        
+
         return CONNECTION_NAMESPACE + connectionId;
-    }
-
-    /**
-     * Helper method that converts the given stringified json array to a set of Strings
-     *
-     * @pre jsonArrayString != null
-     * @post return != null
-     */
-    private static Set<String> jsonStringToSet(String jsonArrayString) {
-        assert jsonArrayString != null;
-
-        try {
-            return objectMapper.readValue(jsonArrayString, new TypeReference<HashSet<String>>() {
-            });
-        } catch (JsonProcessingException e) {
-            throw new AssertionError(e.getMessage());
-        }
-    }
-
-    /**
-     * Helper method that converts the given set of strings to a stringified json array.
-     *
-     * @pre set != null
-     * @post return != null
-     */
-    private static String setToJsonString(Set<String> set) {
-        try {
-            return objectMapper.writeValueAsString(set);
-        } catch (JsonProcessingException e) {
-            throw new AssertionError(e.getMessage());
-        }
     }
 }
