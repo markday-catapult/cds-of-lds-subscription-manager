@@ -108,6 +108,10 @@ using [AWS SAM](https://docs.aws.amazon.com/serverless-application-model/latest/
 
 samconfig.toml
 
+### Running Locally
+
+TODO
+
 ### Sam Deployment
 
 To make sure we don't clobber other's stacks while testing, please set up a namespace for your template to run:
