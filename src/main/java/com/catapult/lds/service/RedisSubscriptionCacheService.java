@@ -3,7 +3,6 @@ package com.catapult.lds.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.lettuce.core.KeyValue;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -12,11 +11,9 @@ import io.lettuce.core.api.sync.RedisHashCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -90,7 +87,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      * @pre jsonArrayString != null
      * @post return != null
      */
-    private static Set<String> jsonStringToSet(String jsonArrayString) {
+    static Set<String> jsonStringToSet(String jsonArrayString) {
         assert jsonArrayString != null;
 
         try {
@@ -107,9 +104,46 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      * @pre set != null
      * @post return != null
      */
-    private static String setToJsonString(Set<String> set) {
+    static String setToJsonString(Set<String> set) {
+        assert set != null;
+
         try {
             return objectMapper.writeValueAsString(set);
+        } catch (JsonProcessingException e) {
+            throw new AssertionError(e.getMessage());
+        }
+    }
+
+    /**
+     * Helper method that converts the given stringified denormalized cache value to its deserialized form.
+     *
+     * @pre jsonArrayString != null
+     * @post return != null
+     */
+    static DenormalizedCacheValue jsonStringToDenormalizedCacheValue(String key, String jsonArrayString) {
+        assert jsonArrayString != null;
+
+        try {
+            Collection<DenormalizedCacheValue.ConnectionSubscriptions> cs = objectMapper.readValue(jsonArrayString,
+                    new TypeReference<Collection<DenormalizedCacheValue.ConnectionSubscriptions>>() {
+                    });
+            return DenormalizedCacheValue.builder().key(key).connectionSubscriptions(cs).build();
+        } catch (JsonProcessingException e) {
+            throw new AssertionError(e.getMessage());
+        }
+    }
+
+    /**
+     * Helper method that converts the given set of denormalized cache value to its stringified json form.
+     *
+     * @pre value != null
+     * @post return != null
+     */
+    static String denormalizedCacheValueToJsonString(DenormalizedCacheValue value) {
+        assert value != null;
+
+        try {
+            return objectMapper.writeValueAsString(value.getConnectionSubscriptions());
         } catch (JsonProcessingException e) {
             throw new AssertionError(e.getMessage());
         }
@@ -134,7 +168,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         RedisHashCommands<String, String> syncCommands = this.redisClient.sync();
 
-        String connectionKey = connectionIdToKey(connectionId);
+        String connectionKey = this.connectionIdToKey(connectionId);
         boolean success = syncCommands.hsetnx(connectionKey, CREATED_AT, "" + System.currentTimeMillis());
 
         if (!success) {
@@ -149,7 +183,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     @Override
     public boolean connectionExists(String connectionId) {
         assert connectionId != null;
-        String connectionKey = connectionIdToKey(connectionId);
+        String connectionKey = this.connectionIdToKey(connectionId);
 
         RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
@@ -167,7 +201,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
-        String connectionKey = connectionIdToKey(connectionId);
+        String connectionKey = this.connectionIdToKey(connectionId);
         if (syncCommands.exists(connectionKey) == 0) {
             throw new SubscriptionException(String.format("Connection '%s' does not exist in the cache.",
                     connectionId));
@@ -180,7 +214,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         this.logger.info("removing all remaining subscriptions {} ", remainingSubscriptionIds);
 
-        remainingSubscriptionIds.forEach(k -> cancelSubscriptionInternal(connectionId, k)); // cancel all remaining subscriptions
+        remainingSubscriptionIds.forEach(k -> this.cancelSubscriptionInternal(connectionId, k)); // cancel all remaining subscriptions
 
         syncCommands.del(connectionKey);
     }
@@ -194,7 +228,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      */
     private void cancelSubscriptionInternal(String connectionId, String subscriptionId) {
         try {
-            cancelSubscription(connectionId, subscriptionId);
+            this.cancelSubscription(connectionId, subscriptionId);
         } catch (SubscriptionException e) {
             // ignore this exception
         }
@@ -204,14 +238,14 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      * {@inheritDoc}
      */
     @Override
-    public void putSubscription(Subscription subscription) throws SubscriptionException {
+    public void addSubscription(Subscription subscription) throws SubscriptionException {
         assert subscription != null;
 
         RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         String connectionId = subscription.getConnectionId();
         String subscriptionId = subscription.getId();
-        String connectionKey = connectionIdToKey(connectionId);
+        String connectionKey = this.connectionIdToKey(connectionId);
 
         this.logger.info("creating subscription '{}' for connection '{}'", subscriptionId, connectionId);
 
@@ -230,20 +264,19 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         // DENORMALIZED CACHE UPDATE
 
         // get connections for all resources in the new subscription
-        Map<String, Set<String>> connectionsByResourceId = getConnectionIdsForResourceIds(subscription.getResources());
+        Map<String, DenormalizedCacheValue> connectionsByResourceId =
+                this.getDenormalizedConnectionsForResourceIds(subscription.getResources());
 
-        // add the connection id to the list of connections
-        connectionsByResourceId.values()
-                .stream()
-                .filter(v -> !v.contains(connectionId))
-                .forEach(v -> v.add(connectionId));
+        // add the subscription to each of the denormalized cache values:
+        connectionsByResourceId.values().forEach(v -> v.addSubscription(connectionId, subscriptionId));
 
+        // store the updated denormalized cache
         Map<String, String> request = connectionsByResourceId
                 .entrySet()
                 .stream()
                 .collect(Collectors.toMap(
                         kv -> kv.getKey(),
-                        kv -> setToJsonString(kv.getValue()))
+                        kv -> denormalizedCacheValueToJsonString(kv.getValue()))
                 );
 
         // if there are name-spaced resources that were not initially associated with a connection, add them now.
@@ -251,7 +284,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
             syncCommands.mset(request);
         }
 
-        this.logger.info("sending request to cache: {}", request);
+        this.logger.debug("sending request to cache: {}", request);
     }
 
     /**
@@ -264,56 +297,68 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
-        String connectionKey = connectionIdToKey(connectionId);
+        String connectionKey = this.connectionIdToKey(connectionId);
 
-        this.logger.info("cancelling subscription '{}' for connection '{}'", subscriptionId, connectionId);
+        this.logger.debug("cancelling subscription '{}' for connection '{}'", subscriptionId, connectionId);
 
         // adjust denormalized cache here
 
-        // get all resources for this connection we need to keep
-        Set<String> resourcesToKeep = this.getSubscriptions(connectionId)
-                .stream()
-                .filter(s -> !s.getId().equals(subscriptionId))
-                .flatMap(s -> s.getResources().stream())
-                .collect(Collectors.toSet());
+        Subscription subscription = this.getSubscription(connectionId, subscriptionId);
 
-        this.logger.info("resources to keep: {}", resourcesToKeep);
+        // no work to do if subscription cannot be found
+        if (subscription == null) {
+            return;
+        }
 
-        // get all resources for this subscription and subtract the resources we need to keep
-        Subscription subscriptionToRemove = this.getSubscription(connectionId, subscriptionId);
-        Set<String> resourcesToDisassociate = subscriptionToRemove.getResources();
-        resourcesToDisassociate.removeAll(resourcesToKeep);
+        Set<String> resources = subscription.getResources();
 
-        this.logger.info("resources to disassociate: {}", resourcesToDisassociate);
-
-        // if there are resources that are only associated to this connection by the subscription to delete, remove
-        // the connection from those resources.
-        if (!resourcesToDisassociate.isEmpty()) {
-            // get key value pairs for name-spaced resources (ie. "user-<user-id>" or "athlete-<athlete-id>")
-            Map<String, String> modifiedConnectionJsonListByResourceId =
-                    syncCommands.mget(resourcesToDisassociate.toArray(String[]::new)).stream()
-                            .map(kv -> KeyValue.just(kv.getKey(), jsonStringToSet(kv.getValue())))
-                            .filter(kv -> kv.getValue().remove(connectionId) && !kv.getValue().isEmpty())
+        if (!resources.isEmpty()) {
+            Map<String, DenormalizedCacheValue> denormalizedCacheValuesByResourceId =
+                    syncCommands.mget(resources.toArray(String[]::new))
+                            .stream()
                             .collect(Collectors.toMap(
                                     kv -> kv.getKey(),
-                                    kv -> setToJsonString(kv.getValue())));
+                                    kv -> jsonStringToDenormalizedCacheValue(kv.getKey(), kv.getValue())));
 
-            this.logger.info("modifiedConnectionJsonListByResourceId: {}", modifiedConnectionJsonListByResourceId);
+            this.logger.trace("denormalizedCacheValuesByResourceId: {}", denormalizedCacheValuesByResourceId);
 
-            List<String> resourcesWithoutConnections = new ArrayList<>(resourcesToDisassociate);
+            denormalizedCacheValuesByResourceId.values()
+                    .forEach(v -> v.removeSubscription(connectionId, subscriptionId));
 
-            resourcesWithoutConnections.removeAll(modifiedConnectionJsonListByResourceId.keySet());
-            this.logger.info("resources without connections: {}", resourcesWithoutConnections);
+            this.logger.trace("resources: {} ", denormalizedCacheValuesByResourceId);
+
+            // get the set of empty resources to delete
+            Set<String> resourcesToDelete = denormalizedCacheValuesByResourceId.entrySet()
+                    .stream()
+                    .filter(es -> es.getValue().isEmpty())
+                    .map(es -> es.getKey())
+                    .collect(Collectors.toSet());
+
+            this.logger.trace("resourcesToDelete: {} ", resourcesToDelete);
+
+            // build the map of modified resources
+            Map<String, String> resourcesToModify =
+                    denormalizedCacheValuesByResourceId.entrySet()
+                            .stream()
+                            .filter(es -> !resourcesToDelete.contains(es.getKey()))
+                            .collect(Collectors.toMap(
+                                    es -> es.getKey(),
+                                    es -> denormalizedCacheValueToJsonString(es.getValue())));
+
+            // remove denormalized connections from a device if the list of subscriptions is empty
+
+            this.logger.trace("modifiedResources: {} " + resourcesToModify);
 
             // delete resource cache
-            if (resourcesWithoutConnections.size() > 0) {
-                syncCommands.del(resourcesWithoutConnections.toArray(String[]::new));
+            if (resourcesToDelete.size() > 0) {
+                syncCommands.del(resourcesToDelete.toArray(String[]::new));
             }
 
             // modify resource cache entries
-            if (modifiedConnectionJsonListByResourceId.size() > 0) {
-                syncCommands.mset(modifiedConnectionJsonListByResourceId);
+            if (resourcesToModify.size() > 0) {
+                syncCommands.mset(resourcesToModify);
             }
+
         }
 
         syncCommands.hdel(connectionKey, subscriptionId);
@@ -328,7 +373,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
-        String connectionKey = connectionIdToKey(connectionId);
+        String connectionKey = this.connectionIdToKey(connectionId);
 
         Map<String, String> resourceListsBySubscriptionId = syncCommands.hgetall(connectionKey);
         if (resourceListsBySubscriptionId.isEmpty()) {
@@ -352,7 +397,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
-        String connectionKey = connectionIdToKey(connectionId);
+        String connectionKey = this.connectionIdToKey(connectionId);
         String resourceJson = syncCommands.hget(connectionKey, subscriptionId);
 
         return resourceJson == null ? null : new Subscription(connectionId, subscriptionId, resourceJson);
@@ -361,20 +406,20 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     /**
      * {@inheritDoc}
      */
-    @Override
-    public Map<String, Set<String>> getConnectionIdsForResourceIds(Set<String> resourceIds) {
+    public Map<String, DenormalizedCacheValue> getDenormalizedConnectionsForResourceIds(Set<String> resourceIds) {
         assert resourceIds != null;
 
         if (resourceIds.isEmpty()) return Collections.emptyMap();
 
         RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
-        Map<String, Set<String>> connectionsByResourceId =
+        Map<String, DenormalizedCacheValue> connectionsByResourceId =
                 syncCommands.mget(resourceIds.toArray(String[]::new))
                         .stream()
                         .collect(Collectors.toMap(
                                 kv -> kv.getKey(),
-                                kv -> kv.isEmpty() ? new HashSet<>() : jsonStringToSet(kv.getValue()))
+                                kv -> kv.isEmpty() ? jsonStringToDenormalizedCacheValue(kv.getKey(), "[]") :
+                                        jsonStringToDenormalizedCacheValue(kv.getKey(), kv.getValue()))
                         );
 
         assert resourceIds.size() == connectionsByResourceId.size();
