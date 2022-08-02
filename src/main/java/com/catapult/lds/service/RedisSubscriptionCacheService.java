@@ -29,34 +29,34 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      *
      * @invariant instance != null
      */
-    public final static SubscriptionCacheService instance = new RedisSubscriptionCacheService();
+    public static final SubscriptionCacheService instance = new RedisSubscriptionCacheService();
 
     /**
      * The name of the environment variable which has a value of the url of the redis cluster.
      */
-    public final static String LDS_REDIS_HOST_ENV = "LDS_REDIS_HOST";
+    public static final String LDS_REDIS_HOST_ENV = "LDS_REDIS_HOST";
 
     /**
      * The name of the environment variable which has a value of the url of the redis cluster port.
      */
-    public final static String LDS_REDIS_PORT_ENV = "LDS_REDIS_PORT";
+    public static final String LDS_REDIS_PORT_ENV = "LDS_REDIS_PORT";
 
     /**
      * The name of the key which has a value of the timestamp that a hash value was created at.
      */
-    private final static String CREATED_AT = "created_at";
+    private static final String CREATED_AT = "created_at";
 
     /**
      * The object mapper used by this service.
      *
      * @invariant objectMapper != null
      */
-    private final static ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * The namespace for a connection key
      */
-    private final static String CONNECTION_NAMESPACE = "$connection-id-";
+    private static final String CONNECTION_NAMESPACE = "$connection-id-";
 
     /**
      * Connection to AWS Elasticache redis cluster
@@ -109,41 +109,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         try {
             return objectMapper.writeValueAsString(set);
-        } catch (JsonProcessingException e) {
-            throw new AssertionError(e.getMessage());
-        }
-    }
-
-    /**
-     * Helper method that converts the given stringified denormalized cache value to its deserialized form.
-     *
-     * @pre jsonArrayString != null
-     * @post return != null
-     */
-    static DenormalizedCacheValue jsonStringToDenormalizedCacheValue(String key, String jsonArrayString) {
-        assert jsonArrayString != null;
-
-        try {
-            Collection<DenormalizedCacheValue.ConnectionSubscriptions> cs = objectMapper.readValue(jsonArrayString,
-                    new TypeReference<Collection<DenormalizedCacheValue.ConnectionSubscriptions>>() {
-                    });
-            return DenormalizedCacheValue.builder().resourceKey(key).connectionSubscriptions(cs).build();
-        } catch (JsonProcessingException e) {
-            throw new AssertionError(e.getMessage());
-        }
-    }
-
-    /**
-     * Helper method that converts the given set of denormalized cache value to its stringified json form.
-     *
-     * @pre value != null
-     * @post return != null
-     */
-    static String denormalizedCacheValueToJsonString(DenormalizedCacheValue value) {
-        assert value != null;
-
-        try {
-            return objectMapper.writeValueAsString(value.getConnectionSubscriptions());
         } catch (JsonProcessingException e) {
             throw new AssertionError(e.getMessage());
         }
@@ -276,7 +241,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                 .stream()
                 .collect(Collectors.toMap(
                         kv -> kv.getKey(),
-                        kv -> denormalizedCacheValueToJsonString(kv.getValue()))
+                        kv -> kv.getValue().getSerializedConnectionList())
                 );
 
         // if there are name-spaced resources that were not initially associated with a connection, add them now.
@@ -318,7 +283,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                             .stream()
                             .collect(Collectors.toMap(
                                     kv -> kv.getKey(),
-                                    kv -> jsonStringToDenormalizedCacheValue(kv.getKey(), kv.getValue())));
+                                    kv -> DenormalizedCacheValue.deserializeFromJson(kv.getKey(), kv.getValue())));
 
             this.logger.trace("denormalizedCacheValuesByResourceId: {}", denormalizedCacheValuesByResourceId);
 
@@ -343,7 +308,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                             .filter(es -> !resourcesToDelete.contains(es.getKey()))
                             .collect(Collectors.toMap(
                                     es -> es.getKey(),
-                                    es -> denormalizedCacheValueToJsonString(es.getValue())));
+                                    es -> es.getValue().getSerializedConnectionList()));
 
             // remove denormalized connections from a device if the list of subscriptions is empty
 
@@ -418,8 +383,9 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                         .stream()
                         .collect(Collectors.toMap(
                                 kv -> kv.getKey(),
-                                kv -> kv.isEmpty() ? jsonStringToDenormalizedCacheValue(kv.getKey(), "[]") :
-                                        jsonStringToDenormalizedCacheValue(kv.getKey(), kv.getValue()))
+                                kv -> kv.isEmpty() ?
+                                        DenormalizedCacheValue.deserializeFromJson(kv.getKey(), "[]") :
+                                        DenormalizedCacheValue.deserializeFromJson(kv.getKey(), kv.getValue()))
                         );
 
         assert resourceIds.size() == connectionsByResourceId.size();

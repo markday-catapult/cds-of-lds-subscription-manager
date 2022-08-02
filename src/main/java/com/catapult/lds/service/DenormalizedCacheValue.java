@@ -2,12 +2,16 @@ package com.catapult.lds.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -20,14 +24,18 @@ import java.util.stream.Collectors;
 /**
  * {@code DenormalizedCacheValue} is a deserialized representation of a value in the denormalized cache.
  */
-@Value
-@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class DenormalizedCacheValue {
 
     /**
-     * The object writer associated with this denormalized cache value
+     * The object mapper used by all {@code DenormalizedCacheValue} instances.
      */
-    private final static ObjectWriter objectWriter = new ObjectMapper().writer();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * The logger used by all {@code DenormalizedCacheValue} instances.
+     */
+    private static final Logger logger = LoggerFactory.getLogger(DenormalizedCacheValue.class);
 
     /**
      * The key in the denormalized cache whose value is this denormalized cache value
@@ -42,6 +50,40 @@ public class DenormalizedCacheValue {
      * @invariant connectionSubscriptions != null
      */
     private final Collection<ConnectionSubscriptions> connectionSubscriptions;
+
+    /**
+     * Instantiates a new {@code DenormalizedCacheValue} from the given key and connection list json string.
+     *
+     * @pre key != null
+     * @pre jsonArrayString != null
+     * @post return != null
+     */
+    public static DenormalizedCacheValue deserializeFromJson(String key, String connectionListJson) {
+        assert key != null;
+        assert connectionListJson != null;
+
+        try {
+            Collection<DenormalizedCacheValue.ConnectionSubscriptions> cs = objectMapper.readValue(connectionListJson,
+                    new TypeReference<Collection<ConnectionSubscriptions>>() {
+                    });
+            return new DenormalizedCacheValue(key, cs);
+        } catch (JsonProcessingException e) {
+            throw new AssertionError(e.getMessage());
+        }
+    }
+
+    /**
+     * Serializes the connection list for storage.
+     *
+     * @post return != null
+     */
+    public String getSerializedConnectionList() {
+        try {
+            return objectMapper.writeValueAsString(this.connectionSubscriptions);
+        } catch (JsonProcessingException e) {
+            throw new AssertionError(e.getMessage());
+        }
+    }
 
     /**
      * Associates the given subscription id to the given connection id in this cache value
@@ -79,12 +121,21 @@ public class DenormalizedCacheValue {
                 .findFirst();
 
         if (optionalConnection.isEmpty()) {
+            DenormalizedCacheValue.logger.debug("Could not remove subscription {} from connection {}:  Connection not" +
+                    " found.", subscriptionId, connectionId);
             return;
         }
 
         ConnectionSubscriptions connection = optionalConnection.get();
-        connection.subscriptionIds.remove(subscriptionId);
+        if (connection.subscriptionIds.remove(subscriptionId) == false) {
+            DenormalizedCacheValue.logger.debug("Could not remove subscription {} from connection {}:  Subscription " +
+                    "not found.", subscriptionId, connectionId);
+        }
+
         if (connection.subscriptionIds.isEmpty()) {
+            DenormalizedCacheValue.logger.debug("Afer removing subscription {} from connection {}, connection has no " +
+                    "more subscriptions associated with it.", subscriptionId, connectionId);
+
             this.connectionSubscriptions.remove(connection);
         }
     }
@@ -120,7 +171,7 @@ public class DenormalizedCacheValue {
     @Override
     public String toString() {
         try {
-            return objectWriter.writeValueAsString(this);
+            return objectMapper.writer().writeValueAsString(this);
         } catch (JsonProcessingException e) {
             throw new AssertionError(e.getMessage());
         }
