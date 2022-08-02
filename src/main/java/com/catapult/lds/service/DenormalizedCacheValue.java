@@ -3,6 +3,7 @@ package com.catapult.lds.service;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Value;
@@ -23,7 +24,23 @@ import java.util.stream.Collectors;
 @Builder
 public class DenormalizedCacheValue {
 
-    private final String key;
+    /**
+     * The object writer associated with this denormalized cache value
+     */
+    private final static ObjectWriter objectWriter = new ObjectMapper().writer();
+
+    /**
+     * The key in the denormalized cache whose value is this denormalized cache value
+     *
+     * @invariant key != null
+     */
+    private final String resourceKey;
+
+    /**
+     * The set of connections and their subscriptions associated with the resource key
+     *
+     * @invariant connectionSubscriptions != null
+     */
     private final Collection<ConnectionSubscriptions> connectionSubscriptions;
 
     /**
@@ -40,9 +57,10 @@ public class DenormalizedCacheValue {
                 .stream()
                 .filter(c -> c.connectionId.equals(connectionId))
                 .findFirst()
-                .map(c -> c.subscriptionIds.add(subscriptionId))
-                .orElseGet(() -> this.connectionSubscriptions.add(new ConnectionSubscriptions(connectionId,
-                        new HashSet<>(Arrays.asList(subscriptionId)))));
+                .ifPresentOrElse(
+                        c -> c.subscriptionIds.add(subscriptionId),
+                        () -> this.connectionSubscriptions.add(new ConnectionSubscriptions(connectionId,
+                                new HashSet<>(Arrays.asList(subscriptionId)))));
     }
 
     /**
@@ -102,7 +120,7 @@ public class DenormalizedCacheValue {
     @Override
     public String toString() {
         try {
-            return new ObjectMapper().writeValueAsString(this);
+            return objectWriter.writeValueAsString(this);
         } catch (JsonProcessingException e) {
             throw new AssertionError(e.getMessage());
         }

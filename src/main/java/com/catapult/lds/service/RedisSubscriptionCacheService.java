@@ -127,7 +127,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
             Collection<DenormalizedCacheValue.ConnectionSubscriptions> cs = objectMapper.readValue(jsonArrayString,
                     new TypeReference<Collection<DenormalizedCacheValue.ConnectionSubscriptions>>() {
                     });
-            return DenormalizedCacheValue.builder().key(key).connectionSubscriptions(cs).build();
+            return DenormalizedCacheValue.builder().resourceKey(key).connectionSubscriptions(cs).build();
         } catch (JsonProcessingException e) {
             throw new AssertionError(e.getMessage());
         }
