@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -150,6 +151,8 @@ public class DenormalizedCacheValue {
 
     /**
      * Returns the set of connection ids for this cache value.
+     *
+     * @post return != null
      */
     @JsonIgnore
     public Set<String> getConnectionIds() {
@@ -158,6 +161,8 @@ public class DenormalizedCacheValue {
 
     /**
      * Returns a set of subscriptions associated with the connection id for this cache value.
+     *
+     * @post return != null
      */
     public Set<String> getSubscriptionIds(String connectionId) {
         return this.connectionSubscriptions
@@ -168,6 +173,21 @@ public class DenormalizedCacheValue {
                 .orElse(Collections.emptySet());
     }
 
+    /**
+     * Returns a map of subscription ids keyed by connection id.
+     *
+     * @post return != null
+     */
+    public Map<String, Set<String>> getSubscriptionIdsByConnectionId() {
+        return this.connectionSubscriptions
+                .stream()
+                .collect(Collectors.toMap(ConnectionSubscriptions::getConnectionId,
+                        ConnectionSubscriptions::getSubscriptionIds));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String toString() {
         try {
@@ -177,10 +197,14 @@ public class DenormalizedCacheValue {
         }
     }
 
+    /**
+     * {@code ConnectionSubscriptions} is a container class that associates subscriptions ids with a connection.
+     * <p/>
+     */
     @Value
     @Builder
     @Jacksonized
-    static class ConnectionSubscriptions {
+    private static class ConnectionSubscriptions {
         /**
          * The connection ID associated with this denormalized connection
          */
