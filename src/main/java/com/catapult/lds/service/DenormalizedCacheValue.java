@@ -29,12 +29,12 @@ import java.util.stream.Collectors;
 public class DenormalizedCacheValue {
 
     /**
-     * The object mapper used by all {@code DenormalizedCacheValue} instances.
+     * The object mapper used by all {@code DenormalizedCacheValue} instances
      */
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * The logger used by all {@code DenormalizedCacheValue} instances.
+     * The logger used by all {@code DenormalizedCacheValue} instances
      */
     private static final Logger logger = LoggerFactory.getLogger(DenormalizedCacheValue.class);
 
@@ -74,7 +74,7 @@ public class DenormalizedCacheValue {
     }
 
     /**
-     * Serializes the connection list for storage.
+     * Returns a json serialized version of the connection list.
      *
      * @post return != null
      */
@@ -122,19 +122,19 @@ public class DenormalizedCacheValue {
                 .findFirst();
 
         if (optionalConnection.isEmpty()) {
-            DenormalizedCacheValue.logger.debug("Could not remove subscription {} from connection {}:  Connection not" +
+            logger.debug("Could not remove subscription {} from connection {}:  Connection not" +
                     " found.", subscriptionId, connectionId);
             return;
         }
 
         ConnectionSubscriptions connection = optionalConnection.get();
         if (connection.subscriptionIds.remove(subscriptionId) == false) {
-            DenormalizedCacheValue.logger.debug("Could not remove subscription {} from connection {}:  Subscription " +
+            logger.debug("Could not remove subscription {} from connection {}:  Subscription " +
                     "not found.", subscriptionId, connectionId);
         }
 
         if (connection.subscriptionIds.isEmpty()) {
-            DenormalizedCacheValue.logger.debug("Afer removing subscription {} from connection {}, connection has no " +
+            logger.debug("Afer removing subscription {} from connection {}, connection has no " +
                     "more subscriptions associated with it.", subscriptionId, connectionId);
 
             this.connectionSubscriptions.remove(connection);
