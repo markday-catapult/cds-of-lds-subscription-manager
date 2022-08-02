@@ -14,9 +14,12 @@ import org.testng.collections.Sets;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import static org.testng.AssertJUnit.assertEquals;
 
 public class RedisSubscriptionCacheServiceTest {
 
@@ -247,7 +250,14 @@ public class RedisSubscriptionCacheServiceTest {
         denormalizedCacheValue.addSubscription("con1", "sub2");
         denormalizedCacheValue.addSubscription("con2", "sub2");
 
+        Map<String, Set<String>> subscriptionIdsByConnection =
+                denormalizedCacheValue.getSubscriptionIdsByConnectionId();
+
+        assertEquals(4, subscriptionIdsByConnection.keySet().size());
+        assertEquals(2, subscriptionIdsByConnection.get("con1").size());
+
+        this.logger.info("{}", denormalizedCacheValue);
         String json = denormalizedCacheValue.getSerializedConnectionList();
-        System.out.println(json);
+        this.logger.info(json);
     }
 }

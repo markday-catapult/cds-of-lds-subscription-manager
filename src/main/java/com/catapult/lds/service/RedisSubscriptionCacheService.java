@@ -1,7 +1,6 @@
 package com.catapult.lds.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -13,7 +12,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -79,23 +77,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
 
         this.redisClient = RedisClient.create(redisURI).connect();
-    }
-
-    /**
-     * Helper method that converts the given stringified json array to a set of Strings
-     *
-     * @pre jsonArrayString != null
-     * @post return != null
-     */
-    static Set<String> jsonStringToSet(String jsonArrayString) {
-        assert jsonArrayString != null;
-
-        try {
-            return objectMapper.readValue(jsonArrayString, new TypeReference<HashSet<String>>() {
-            });
-        } catch (JsonProcessingException e) {
-            throw new AssertionError(e.getMessage());
-        }
     }
 
     /**
