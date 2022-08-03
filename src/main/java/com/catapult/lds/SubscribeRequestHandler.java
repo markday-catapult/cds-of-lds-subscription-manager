@@ -117,7 +117,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
             // TODO: Authorize the subscription
 
             // Add the subscription
-            subscriptionCacheService.putSubscription(subscription);
+            subscriptionCacheService.addSubscription(subscription);
 
             // return a successful response
             return Util.createSubscriptionResponse(

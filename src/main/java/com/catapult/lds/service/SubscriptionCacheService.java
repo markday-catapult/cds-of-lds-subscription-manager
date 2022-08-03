@@ -45,7 +45,7 @@ public interface SubscriptionCacheService {
      *                               connection}.
      * @pre subscription != null
      */
-    void putSubscription(Subscription subscription) throws SubscriptionException;
+    void addSubscription(Subscription subscription) throws SubscriptionException;
 
     /**
      * Cancels the subscription identified by the given connection id and subscription id.
@@ -73,13 +73,14 @@ public interface SubscriptionCacheService {
     Subscription getSubscription(String connectionId, String subscriptionId);
 
     /**
-     * Returns a map of connection Ids associated with the given criteria.  Any resource ids that did not have
-     * connections associated with them will have contain an empty set
+     * Returns a map of {@code denormalized cache values} associated with the given criteria.  Any resource ids that did
+     * not have connections associated with it will have an {@linkplain DenormalizedCacheValue#isEmpty empty} value.
      *
      * @pre resourceIds != null
      * @post return != null
      * @post return.size() = resourceIds.size()
      */
-    Map<String, Set<String>> getConnectionIdsForResourceIds(Set<String> resourceIds);
+    Map<String, DenormalizedCacheValue> getDenormalizedConnectionsForResourceIds(Set<String> resourceIds);
 
 }
+

@@ -62,5 +62,4 @@ public class SubscribeRequestHandlerTest {
 
         namespacedResources.forEach(r -> logger.info(r));
     }
-
 }
