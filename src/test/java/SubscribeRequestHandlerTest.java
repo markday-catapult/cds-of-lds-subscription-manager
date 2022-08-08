@@ -1,5 +1,5 @@
 import com.catapult.lds.SubscribeRequestHandler;
-import com.catapult.lds.service.SubscriptionRequestResources;
+import com.catapult.lds.service.ResourceNameSpace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
@@ -18,8 +18,6 @@ public class SubscribeRequestHandlerTest {
     @Test
     void testSubscriptionRequestNamespaces() {
 
-        SubscriptionRequestResources resources = new SubscriptionRequestResources();
-
         final String dataClass = "ts";
 
         final String devKey = "device";
@@ -28,9 +26,10 @@ public class SubscribeRequestHandlerTest {
         final String devId1 = "dev-id-15556567";
         final String devId2 = "dev-id-2342342";
         final String athId1 = "ath-id-33223434";
-        resources.setDeviceIds(Set.of(devId1, devId2));
-        resources.setAthleteIds(Set.of(athId1));
-
+        SubscribeRequestHandler.SubscriptionRequest.SubscriptionRequestResources resources =
+                SubscribeRequestHandler.SubscriptionRequest.SubscriptionRequestResources.builder()
+                        .athleteIds(Set.of(athId1))
+                        .deviceIds(Set.of(devId1, devId2)).build();
 
         SubscribeRequestHandler.SubscriptionRequest subscriptionRequest =
                 SubscribeRequestHandler.SubscriptionRequest.builder()
@@ -44,17 +43,17 @@ public class SubscribeRequestHandlerTest {
 
         Assert.assertTrue(namespacedResources.contains(String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
                 dataClass,
-                devKey,
+                ResourceNameSpace.DEVICE.value(),
                 devId1)));
 
         Assert.assertTrue(namespacedResources.contains(String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
                 dataClass,
-                devKey,
+                ResourceNameSpace.DEVICE.value(),
                 devId1)));
 
         Assert.assertTrue(namespacedResources.contains(String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
                 dataClass,
-                athKey,
+                ResourceNameSpace.ATHLETE.value(),
                 athId1)));
 
         namespacedResources.forEach(r -> logger.info(r));
