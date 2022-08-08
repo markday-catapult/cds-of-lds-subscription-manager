@@ -98,6 +98,11 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
                 return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
                         subscriptionRequest.requestId, "Subscription request missing required fields");
             }
+            if(subscriptionRequest.getNamespacedResources().isEmpty()){
+                return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
+                        subscriptionRequest.requestId, "Subscription request missing resources");
+
+            }
         } catch (JsonProcessingException e) {
             return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST, null, e.getMessage());
         }
