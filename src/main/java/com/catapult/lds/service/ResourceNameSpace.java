@@ -1,10 +1,7 @@
 package com.catapult.lds.service;
 
-import com.catapult.lds.SubscribeRequestHandler;
-
 /**
- * {@code ResourceNameSpace} namespace mapping
- * for {@link SubscribeRequestHandler.SubscriptionRequest.SubscriptionRequestResources}.
+ * {@code ResourceNameSpace} enumerates possible resource types that may be subscribed to.  The {@linkplain #value value} of each is intended to be used for cache key name-spacing.
  **/
 public enum ResourceNameSpace {
 
