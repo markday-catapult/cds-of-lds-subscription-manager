@@ -1,0 +1,143 @@
+### This template provides common CICD functionality for building SAM applications
+
+# Application
+variables:
+  SHOW_ENVIRONMENT_INFO: "true"
+  SAM_PACKAGE_FILE: "packaged.yml"
+
+################# COMMON JOB CONFIG
+# A task that shows relevant CICD information for informational purposes
+.show-cicd-environment:
+  - |
+    if [[ $SHOW_ENVIRONMENT_INFO == "true" ]]
+    then
+      echo "APPLICATION_NAME:         $APPLICATION_NAME"
+      echo "CATAPULT_WORKFLOW_ACTION: $CATAPULT_WORKFLOW_ACTION"
+      echo "CI_COMMIT_REF_PROTECTED:  $CI_COMMIT_REF_PROTECTED"
+      echo "CI_PIPELINE_SOURCE:       $CI_PIPELINE_SOURCE"
+      echo "CI_COMMIT_BRANCH:         $CI_COMMIT_BRANCH"
+      echo "CI_COMMIT_TITLE:          $CI_COMMIT_TITLE"
+      echo "CI_COMMIT_SHA:            $CI_COMMIT_SHA"
+      echo "CI_PIPELINE_ID:           $CI_PIPELINE_ID"
+      echo "CI_DEFAULT_BRANCH:        $CI_DEFAULT_BRANCH"
+      echo "ENV_DEPLOY_NAMESPACE:     $ENV_DEPLOY_NAMESPACE"
+      echo "ENV_DEPLOY_ENVIRONMENT:   $ENV_DEPLOY_ENVIRONMENT"
+      echo "ENV_DEPLOY_REGION:        $ENV_DEPLOY_REGION"
+      echo "ENV_DEPLOY_SCOPE:         $ENV_DEPLOY_SCOPE"
+      echo "SAM_CONFIG_ENV:           $SAM_CONFIG_ENV"
+    fi
+
+
+stages: # List of stages for jobs, and their order of execution
+  - build
+  - deploy
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'  # Run a pipeline if the trigger was 'merge_request_event'
+      variables:
+        CATAPULT_WORKFLOW_ACTION: "commit_to_open_merge_request"
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'  # Do not run a pipeline if it was already run by the above rule
+      when: never
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'       # Run this pipeline if the merge was to default branch
+      variables:
+        CATAPULT_WORKFLOW_ACTION: "merge_to_default_branch"
+    - if: '$CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'  # Run any other pipelines on 'push'
+      variables:
+        CATAPULT_WORKFLOW_ACTION: "commit_to_feature_branch"
+
+# provides configuration for jobs running after a merge to the default branch
+.execute-on-commit-to-merge-request:
+  variables:
+    CATAPULT_DEPLOY_ENVIRONMENT: $ACCOUNT_ID_NPE
+    CATAPULT_DEPLOY_REGION: $AWS_CICD_REGION
+  rules:
+    - if: '$CATAPULT_WORKFLOW_ACTION == "commit_to_open_merge_request"'
+      when: on_success
+      allow_failure: false
+
+.execute-on-merge-to-default:
+  variables:
+    CATAPULT_DEPLOY_ENVIRONMENT: $ACCOUNT_ID_NPE
+    CATAPULT_DEPLOY_REGION: $AWS_CICD_REGION
+  rules:
+    - if: '$CATAPULT_WORKFLOW_ACTION == "merge_to_default_branch"'
+      when: on_success
+      allow_failure: false
+
+# provides common configuration for jobs running a manual deploy
+.execute-web-trigger:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web" && $CATAPULT_WORKFLOW_ACTION != "merge_to_default_branch"'
+      when: on_success
+      allow_failure: false
+
+
+##########  JOB TEMPLATES
+# Build and run unit tests for a SAM function
+.build-sam-lambda:
+  stage: build
+  before_script:
+    - !reference [ .show-cicd-environment ]
+  script:
+    - sam validate -t sam.yml --region ${ENV_DEPLOY_REGION}
+    - sam build -t sam.yml
+
+# Deploy a SAM function to aws infrastructure. When executed, this job rebuilds the application before packaging it.
+.deploy-sam-lambda:
+  stage: deploy
+  before_script:
+    - !reference [ .show-cicd-environment ]
+  script:
+    - sam build -t sam.yml
+    - sam package
+      --config-file samconfig.toml
+      --config-env ${SAM_CONFIG_ENV}
+      --output-template-file ${SAM_PACKAGE_FILE}
+      --region ${ENV_DEPLOY_REGION}
+      --s3-bucket lambda-deploy-lds-${ENV_DEPLOY_REGION}
+      --s3-prefix ${APPLICATION_NAME}/${ENV_DEPLOY_ENVIRONMENT}
+    - sam deploy
+      --stack-name ${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${APPLICATION_NAME}
+      --config-file samconfig.toml
+      --config-env ${SAM_CONFIG_ENV}
+      --template-file ${SAM_PACKAGE_FILE}
+      --region ${ENV_DEPLOY_REGION}
+      --parameter-overrides
+      VersionId=${CI_COMMIT_SHORT_SHA}
+      StackNamespace=${ENV_DEPLOY_NAMESPACE}
+      StackEnv=${ENV_DEPLOY_ENVIRONMENT}
+      VpcStack=${ENV_STACK_VPC}
+      RedisStack=${ENV_STACK_REDIS}
+      KinesisStack=${ENV_STACK_KINESIS}
+      ApiGatewayStack=${ENV_STACK_API_GATEWAY}
+
+
+######### EXECUTABLE JOBS
+build-lambda:
+  variables:
+    ENV_DEPLOY_REGION: "ap-southeast-2"
+  extends:
+    - .build-sam-lambda
+  tags:
+    - lds
+
+deploy-lambda-integration:
+  variables:
+    SAM_CONFIG_ENV: "cicd-integration"
+    ENV_DEPLOY_NAMESPACE: "cicd"
+    ENV_DEPLOY_ENVIRONMENT: "integration"
+    ENV_DEPLOY_REGION: "ap-southeast-2"
+    ENV_DEPLOY_SCOPE: "lds"
+    ENV_STACK_VPC: "cicd-integration-lds-vpc"
+    ENV_STACK_REDIS: "cicd-integration-lds-elasticache-redis"
+    ENV_STACK_KINESIS: "cicd-integration-lds-kinesis"
+    ENV_STACK_API_GATEWAY: "cicd-integration-lds-api-gateway "
+  extends:
+    - .execute-on-merge-to-default
+    - .deploy-sam-lambda
+  tags:
+    - lds-npe-deploy
+
