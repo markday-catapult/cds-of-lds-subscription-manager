@@ -6,6 +6,12 @@ variables:
   APPLICATION_NAME: "of-lds-subscription-manager"
   SHOW_ENVIRONMENT_INFO: "true"
   SAM_PACKAGE_FILE: "packaged.yml"
+  # For unit testing
+  LDS_REDIS_HOST: "redis" 
+
+# Needed for this application
+services:
+  - redis:latest
 
 ################# COMMON JOB CONFIG
 # A task that shows relevant CICD information for informational purposes
@@ -82,7 +88,7 @@ workflow:
 .build-sam-lambda:
   stage: build
   services:
-  - redis:latest
+    - redis:latest
   before_script:
     - !reference [ .show-cicd-environment ]
   script:
