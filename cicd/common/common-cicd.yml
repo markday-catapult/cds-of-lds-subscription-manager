@@ -4,6 +4,7 @@
 variables:
   SHOW_ENVIRONMENT_INFO: "true"
   SAM_PACKAGE_FILE: "packaged.yml"
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
 
 ################# COMMON JOB CONFIG
 # A task that shows relevant CICD information for informational purposes
