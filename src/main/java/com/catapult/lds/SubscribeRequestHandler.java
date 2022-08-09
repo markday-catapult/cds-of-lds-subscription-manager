@@ -4,22 +4,25 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
+import com.catapult.lds.service.ResourceNameSpace;
 import com.catapult.lds.service.Subscription;
 import com.catapult.lds.service.SubscriptionCacheService;
 import com.catapult.lds.service.SubscriptionException;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.extern.jackson.Jacksonized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
-import java.util.Collection;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toSet;
 
 /**
  * {@code SubscribeRequestHandler} is an implementation of {@link RequestHandler} that processes subscribe requests.
@@ -91,10 +94,14 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
 
             if (subscriptionRequest.requestId == null ||
                     subscriptionRequest.dataClass == null ||
-                    subscriptionRequest.resources == null ||
-                    subscriptionRequest.resources.isEmpty()) {
+                    subscriptionRequest.resources == null ) {
                 return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
                         subscriptionRequest.requestId, "Subscription request missing required fields");
+            }
+            if(subscriptionRequest.getNamespacedResources().isEmpty()){
+                return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
+                        subscriptionRequest.requestId, "Subscription request missing resources");
+
             }
         } catch (JsonProcessingException e) {
             return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST, null, e.getMessage());
@@ -102,15 +109,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
 
         // process the request
         try {
-            Set<String> resources = subscriptionRequest.resources.entrySet()
-                    .stream()
-                    .map(e -> e.getValue().stream().map(s -> String.format("%s:%s:%s",
-                                    subscriptionRequest.dataClass,
-                                    e.getKey(),
-                                    s))
-                            .collect(Collectors.toSet()))
-                    .flatMap(Set::stream)
-                    .collect(Collectors.toSet());
+            Set<String> resources = subscriptionRequest.getNamespacedResources();
 
             Subscription subscription = new Subscription(connectionId, resources);
 
@@ -136,32 +135,15 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
     /**
      * {@code SubscriptionRequest} contains information needed to create a new subscription.
      */
-    @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+    @Data
+    @Jacksonized
     @Builder
-    @AllArgsConstructor
     public static class SubscriptionRequest {
+
         private String action;
         private String dataClass;
         private String requestId;
-        private Map<String, Collection<String>> resources;
-
-        /**
-         * Creates a new {@code SubscriptionRequest}.  For use by object mapper only
-         */
-        public SubscriptionRequest() {
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public String toString() {
-            return "SubscriptionRequest{" +
-                    "action='" + action + '\'' +
-                    ", requestId='" + requestId + '\'' +
-                    ", resources=" + resources +
-                    '}';
-        }
+        private SubscriptionRequestResources resources;
 
         /**
          * Returns a set of namespaced resources for this subscription request.
@@ -169,15 +151,42 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
          * @invariant return != null
          */
         public Set<String> getNamespacedResources() {
-            return this.resources.entrySet()
-                    .stream()
-                    .map(e -> e.getValue().stream().map(s -> String.format(NAMESPACED_RESOURCE_PATTERN,
-                                    this.dataClass,
-                                    e.getKey(),
-                                    s))
-                            .collect(Collectors.toSet()))
-                    .flatMap(Set::stream)
-                    .collect(Collectors.toSet());
+            Set<String> nameSpacedResources = new HashSet<>();
+            if(Objects.nonNull(this.resources.athleteIds)){
+                nameSpacedResources.addAll(this.resources.athleteIds.stream().map(a-> String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
+                        dataClass,
+                        ResourceNameSpace.ATHLETE.value(),
+                        a)).collect(toSet()));
+            }
+            if(Objects.nonNull(this.resources.deviceIds)){
+                nameSpacedResources.addAll(this.resources.deviceIds.stream().map(d-> String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
+                        dataClass,
+                        ResourceNameSpace.DEVICE.value(),
+                        d)).collect(toSet()));
+            }
+            if(Objects.nonNull(this.resources.userIds)){
+                nameSpacedResources.addAll(this.resources.userIds.stream().map(u-> String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
+                        dataClass,
+                        ResourceNameSpace.USER.value(),
+                        u)).collect(toSet()));
+            }
+            return  nameSpacedResources;
         }
+
+        /**
+         * {@code SubscriptionRequestResources} contains information about the resources requested in a {@link SubscribeRequestHandler.SubscriptionRequest}
+         **/
+        @Data
+        @Jacksonized
+        @Builder
+        public static class SubscriptionRequestResources {
+            @JsonProperty("athleteId")
+            private Set<String> athleteIds;
+            @JsonProperty("deviceId")
+            private Set<String> deviceIds;
+            @JsonProperty("userId")
+            private Set<String> userIds;
+        }
+
     }
 }
