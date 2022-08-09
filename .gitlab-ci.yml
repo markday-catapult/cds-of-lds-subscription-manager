@@ -81,6 +81,8 @@ workflow:
 # Build and run unit tests for a SAM function
 .build-sam-lambda:
   stage: build
+  services:
+  - redis:latest
   before_script:
     - !reference [ .show-cicd-environment ]
   script:
