@@ -111,6 +111,7 @@ workflow:
       --config-env ${SAM_CONFIG_ENV}
       --template-file ${SAM_PACKAGE_FILE}
       --region ${ENV_DEPLOY_REGION}
+      --no-fail-on-empty-changeset
       --parameter-overrides
       VersionId=${CI_COMMIT_SHORT_SHA}
       StackNamespace=${ENV_DEPLOY_NAMESPACE}
