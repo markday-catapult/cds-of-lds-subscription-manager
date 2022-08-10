@@ -1,0 +1,21 @@
+version = 0.1
+[jf-dev]
+[jf-dev.deploy]
+[jf-dev.deploy.parameters]
+stack_name = "te1-dev-subscription-function-stack"
+s3_bucket = "lambda-deployables-lds-us-west-1"
+s3_prefix = "subscription-function"
+region = "us-west-1"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+image_repositories = []
+parameter_overrides= 'VersionId=versionId StackNamespace=si StackRegion=us-west-1 StackEnv=test ApiGatewayStack=te1-test-lds-api-gateway VpcStack=te1-test-lds-vpc ApiGatewayStack:te1-test-lds-api-gateway RedisStack=te1-test-lds-elasticache-redis'
+
+[cicd-integration]
+[cicd-integration.deploy]
+[cicd-integration.deploy.parameters]
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+image_repositories = []

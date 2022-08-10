@@ -1,0 +1,13 @@
+# This file contains application specific configuration for CICD
+
+variables:
+  # The application or function name
+  APPLICATION_NAME: "of-lds-subscription-manager"
+
+  # Unit test environment variables
+  LDS_REDIS_HOST: "redis"
+  LDS_REDIS_PORT: "6379"
+
+# Services needed for unit testing
+services:
+  - redis:latest

@@ -1,0 +1,415 @@
+# This is the SAM template that represents the architecture of your serverless application
+# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-template-basics.html
+
+#Command to deploy:
+# sam deploy                               \
+#  --template-file sam.yml                     \
+#  --stack-name "${STACK_NAMESPACE}-${STACK_ENV}-lds-demuxer"   \
+#  --region ${STACK_REGION}                                    \
+#  --parameter-overrides                                 		\
+#       StackNamespace=${STACK_NAMESPACE}                      \
+#       StackEnv=${STACK_ENV}                           		 \
+#       VpcStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-vpc \
+#       ApiGatewayStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-api-gateway \
+#       KinesisStack={STACK_NAMESPACE}-${STACK_ENV}-lds-kinesis \
+#       RedisStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-elasticache-redis \
+#       VersionId=`git rev-parse --short HEAD`
+
+
+AWSTemplateFormatVersion: '2010-09-09'
+
+Transform: 'AWS::Serverless-2016-10-31'
+
+Description: Subscription Service Stack
+
+Parameters:
+  StackNamespace:
+    Type: String
+    Description: >-
+      The stack namespace is an up to 10 character prefix on resource names in order to be able to have multiple stacks
+      instantiated at the same time.  The namespace must be defined for dev and test stacks, and will be ignored for
+      integration and production stacks.
+    MinLength: 0
+    MaxLength: 10
+  StackEnv:
+    Description: The stack environment defines the environment namespace for this stack.
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - integration
+      - production
+  VersionId:
+    Description: The version identifier of the lambda.
+    Type: String
+    Default: "versionid"
+  VpcStack:
+    Description: 'The name of the VPC stack.'
+    Type: String
+  ApiGatewayStack:
+    Description: 'The name of the Api Gateway stack.'
+    Type: String
+  RedisStack:
+    Description: 'The name of the redis cluster stack.'
+    Type: String
+
+Conditions:
+  UseStackNamespace: !Or [ !Equals [ !Ref StackEnv, "dev" ], !Equals [ !Ref StackEnv, "test" ] ]
+
+Resources:
+  # Connect Authorization Function
+  WebsocketConnectAuthorizeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - x86_64
+      AutoPublishAlias: !Ref VersionId
+      Description: The WebsocketConnectAuthorizeFunction handles the authorization for the '$connect' route.
+      FunctionName: !If
+        - UseStackNamespace
+        - !Sub '${StackNamespace}-${StackEnv}-of-lds-websocket-connect-authorize'
+        - !Sub '${StackEnv}-of-lds-websocket-connect-authorize'
+      Handler: com.catapult.lds.ConnectAuthorizationHandler::handleRequest
+      PackageType: Zip
+      Runtime: java11
+      MemorySize: 1024
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions: 2
+      Timeout: 10
+      Tracing: Active
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${VpcStack}:client-security-group'
+        SubnetIds: !Split
+          - ','
+          - Fn::ImportValue: !Sub '${VpcStack}:private-subnets'
+      Environment:
+        Variables:
+          EXECUTE_ARN: !Join
+            - ''
+            - - !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:'
+              - Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+              - '/'
+              - Fn::ImportValue: !Sub '${ApiGatewayStack}:stage-name'
+              - '/'
+              - '$connect'
+  WebsocketConnectAuthorizatFunctionApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref WebsocketConnectAuthorizeFunction
+      Principal: apigateway.amazonaws.com
+  ApiGatewayConnectAuthorizer:
+    Type: 'AWS::ApiGatewayV2::Authorizer'
+    Properties:
+      Name: ConnectAuthorizer
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      AuthorizerType: REQUEST
+      AuthorizerUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${WebsocketConnectAuthorizeFunction}/invocations'
+      IdentitySource:
+        - route.request.header.Authorization
+  # Websocket Connect Function
+  WebsocketConnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - x86_64
+      AutoPublishAlias: !Ref VersionId
+      Description: The WebSocketConnectFunction handles the '$connect' route of the configured API gateway
+      FunctionName: !If
+        - UseStackNamespace
+        - !Sub '${StackNamespace}-${StackEnv}-of-lds-websocket-connect'
+        - !Sub '${StackEnv}-of-lds-websocket-connect'
+      Handler: com.catapult.lds.ConnectHandler::handleRequest
+      PackageType: Zip
+      Runtime: java11
+      MemorySize: 1024
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions: 2
+      Timeout: 10
+      Tracing: Active
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${VpcStack}:client-security-group'
+        SubnetIds: !Split
+          - ','
+          - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
+      Environment:
+        Variables:
+          LDS_REDIS_HOST:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
+          LDS_REDIS_PORT:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
+  WebsocketConnectFunctionApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref WebsocketConnectFunction
+      Principal: apigateway.amazonaws.com
+  ApiGatewayConnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      ContentHandlingStrategy: CONVERT_TO_TEXT
+      Description: The Connect Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${WebsocketConnectFunction}/invocations'
+    DependsOn:
+      WebsocketConnectFunction
+  ApiGatewayConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      ApiKeyRequired: No
+      AuthorizerId: !Ref ApiGatewayConnectAuthorizer
+      OperationName: Connect
+      RouteKey: $connect
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref ApiGatewayConnectIntegration
+    DependsOn:
+      - ApiGatewayConnectIntegration
+      - ApiGatewayConnectAuthorizer
+  ApiGatewayConnectRouteResponse:
+    Type: AWS::ApiGatewayV2::RouteResponse
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      RouteId: !Ref ApiGatewayConnectRoute
+      RouteResponseKey: $default
+    DependsOn:
+      ApiGatewayConnectRoute
+  # Subscription Function
+  WebsocketSubscribeRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - x86_64
+      AutoPublishAlias: !Ref VersionId
+      Description: The WebsocketSubscribeRequestFunction handles the 'subscribe' route of the configured API gateway
+      FunctionName: !If
+        - UseStackNamespace
+        - !Sub '${StackNamespace}-${StackEnv}-of-lds-websocket-subscribe-request'
+        - !Sub '${StackEnv}-of-lds-websocket-subscribe-request'
+      Handler: com.catapult.lds.SubscribeRequestHandler::handleRequest
+      PackageType: Zip
+      Runtime: java11
+      MemorySize: 1024
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions: 2
+      Timeout: 10
+      Tracing: Active
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${VpcStack}:client-security-group'
+        SubnetIds: !Split
+          - ','
+          - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
+      Environment:
+        Variables:
+          LDS_REDIS_HOST:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
+          LDS_REDIS_PORT:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
+  WebsocketSubscribeRequestFunctionApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref WebsocketSubscribeRequestFunction
+      Principal: apigateway.amazonaws.com
+  ApiGatewaySubscribeRequestIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      ContentHandlingStrategy: CONVERT_TO_TEXT
+      Description: The Subscribe Request Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${WebsocketSubscribeRequestFunction}/invocations'
+    DependsOn:
+      WebsocketSubscribeRequestFunction
+  ApiGatewaySubscribeRequestRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      ApiKeyRequired: No
+      OperationName: Subscribe
+      RouteKey: subscribe
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref ApiGatewaySubscribeRequestIntegration
+    DependsOn:
+      ApiGatewaySubscribeRequestIntegration
+  ApiGatewaySubscribeRequestRouteResponse:
+    Type: AWS::ApiGatewayV2::RouteResponse
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      RouteId: !Ref ApiGatewaySubscribeRequestRoute
+      RouteResponseKey: $default
+    DependsOn:
+      ApiGatewaySubscribeRequestRoute
+  # Unsubscribe Function
+  WebsocketUnsubscribeRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - x86_64
+      AutoPublishAlias: !Ref VersionId
+      Description: The WebsocketUnsubscribeRequestFunction handles the 'unsubscribe' route of the configured API gateway
+      FunctionName: !If
+        - UseStackNamespace
+        - !Sub '${StackNamespace}-${StackEnv}-of-lds-websocket-unsubscribe-request'
+        - !Sub '${StackEnv}-of-lds-websocket-unsubscribe-request'
+      Handler: com.catapult.lds.UnsubscribeRequestHandler::handleRequest
+      PackageType: Zip
+      Runtime: java11
+      MemorySize: 1024
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions: 1
+      Timeout: 10
+      Tracing: Active
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${VpcStack}:client-security-group'
+        SubnetIds: !Split
+          - ','
+          - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
+      Environment:
+        Variables:
+          LDS_REDIS_HOST:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
+          LDS_REDIS_PORT:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
+  WebsocketUnsubscribeRequestFunctionApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref WebsocketUnsubscribeRequestFunction
+      Principal: apigateway.amazonaws.com
+  ApiGatewayUnsubscribeRequestIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      ContentHandlingStrategy: CONVERT_TO_TEXT
+      Description: The Unsubscribe Request Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${WebsocketUnsubscribeRequestFunction}/invocations'
+    DependsOn:
+      WebsocketUnsubscribeRequestFunction
+  ApiGatewayUnubscribeRequestRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      ApiKeyRequired: No
+      OperationName: Unsubscribe
+      RouteKey: unsubscribe
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref ApiGatewayUnsubscribeRequestIntegration
+    DependsOn:
+      ApiGatewayUnsubscribeRequestIntegration
+  ApiGatewayUnubscribeRequestRouteResponse:
+    Type: AWS::ApiGatewayV2::RouteResponse
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      RouteId: !Ref ApiGatewayUnubscribeRequestRoute
+      RouteResponseKey: $default
+    DependsOn:
+      ApiGatewayUnubscribeRequestRoute
+  # Disconnect function
+  WebsocketDisconnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - x86_64
+      AutoPublishAlias: !Ref VersionId
+      Description: The WebsocketDisconnectFunction handles the '$disconnect' route of the configured API gateway
+      FunctionName: !If
+        - UseStackNamespace
+        - !Sub '${StackNamespace}-${StackEnv}-of-lds-websocket-disconnect'
+        - !Sub '${StackEnv}-of-lds-websocket-disconnect'
+      Handler: com.catapult.lds.DisconnectHandler::handleRequest
+      PackageType: Zip
+      Runtime: java11
+      MemorySize: 1024
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions: 1
+      Timeout: 10
+      Tracing: Active
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${VpcStack}:client-security-group'
+        SubnetIds: !Split
+          - ','
+          - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
+      Environment:
+        Variables:
+          LDS_REDIS_HOST:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
+          LDS_REDIS_PORT:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
+  WebsocketDisconnectFunctionApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref WebsocketDisconnectFunction
+      Principal: apigateway.amazonaws.com
+  ApiGatewayDisconnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      ContentHandlingStrategy: CONVERT_TO_TEXT
+      Description: The Disconnect Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${WebsocketDisconnectFunction}/invocations'
+    DependsOn:
+      WebsocketDisconnectFunction
+  ApiGatewayDisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      ApiKeyRequired: No
+      OperationName: Disonnect
+      RouteKey: $disconnect
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref ApiGatewayDisconnectIntegration
+    DependsOn:
+      ApiGatewayDisconnectIntegration
+  ApiGatewayDisconnectRouteResponse:
+    Type: AWS::ApiGatewayV2::RouteResponse
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      RouteId: !Ref ApiGatewayDisconnectRoute
+      RouteResponseKey: $default
+    DependsOn:
+      ApiGatewayDisconnectRoute
+
+
+Outputs:
+  WebsocketConnectFunction:
+    Description: Websocket connect function
+    Value: !Ref WebsocketConnectFunction
+    Export:
+      Name: !Sub '${AWS::StackName}:websocket-connect-function'
+  WebsocketConnectFunctionArn:
+    Description: Websocket connect function arn
+    Value: !GetAtt WebsocketConnectFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}:websocket-connect-function-arn'

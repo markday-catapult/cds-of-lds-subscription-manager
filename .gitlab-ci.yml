@@ -1,0 +1,11 @@
+#
+# This file contains references to the projects CICD files
+#
+
+include:
+  - local: "/cicd/application.yml"
+  - local: "/cicd/common/common-cicd.yml"
+
+
+
+

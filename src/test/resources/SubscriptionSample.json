@@ -1,0 +1,14 @@
+{
+  "action": "subscribe",
+  "dataClass": "ts",
+  "requestId": "request-abc",
+  "resources": {
+    "athleteId": [
+      "ath-id-33223434"
+    ],
+    "deviceId": [
+      "dev-id-15556567",
+      "dev-id-2342342"
+    ]
+  }
+}
