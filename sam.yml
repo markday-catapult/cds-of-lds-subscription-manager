@@ -400,6 +400,78 @@ Resources:
       RouteResponseKey: $default
     DependsOn:
       ApiGatewayDisconnectRoute
+  # Dead Connection Function
+  ConnectionMaintenanceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - x86_64
+      AutoPublishAlias: !Ref VersionId
+      Description: The ConnectionMaintenanceFunction handles the 'connection-maintenance' route of the configured API gateway
+      FunctionName: !If
+        - UseStackNamespace
+        - !Sub '${StackNamespace}-${StackEnv}-of-lds-websocket-connection-maintenance'
+        - !Sub '${StackEnv}-of-lds-websocket-connection-maintenance'
+      Handler: com.catapult.lds.ConnectionMaintenanceHandler::handleRequest
+      PackageType: Zip
+      Runtime: java11
+      MemorySize: 1024
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions: 1
+      Timeout: 10
+      Tracing: Active
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${VpcStack}:client-security-group'
+        SubnetIds: !Split
+          - ','
+          - 'Fn::ImportValue': !Sub '${VpcStack}:private-subnets'
+      Environment:
+        Variables:
+          LDS_REDIS_HOST:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
+          LDS_REDIS_PORT:
+            Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
+  ConnectionMaintenanceFunctionApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref ConnectionMaintenanceFunction
+      Principal: apigateway.amazonaws.com
+  ApiGatewayConnectionMaintenanceIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      ContentHandlingStrategy: CONVERT_TO_TEXT
+      Description: The Connection Maintenance Integration
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${ConnectionMaintenanceFunction}/invocations'
+    DependsOn:
+      ConnectionMaintenanceFunction
+  ApiGatewayConnectionMaintenanceRequestRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      ApiKeyRequired: No
+      OperationName: Connection Maintenance
+      RouteKey: connection-maintenance
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref ConnectionMaintenanceFunctionApiGatewayPermission
+    DependsOn:
+      ApiGatewayConnectionMaintenanceIntegration
+  ConnectionMaintenanceRequestRouteResponse:
+    Type: AWS::ApiGatewayV2::RouteResponse
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      RouteId: !Ref ApiGatewayConnectionMaintenanceRequestRoute
+      RouteResponseKey: $default
+    DependsOn:
+      ApiGatewayConnectionMaintenanceRequestRoute
 
 
 Outputs:

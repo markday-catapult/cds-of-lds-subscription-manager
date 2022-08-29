@@ -75,7 +75,7 @@ public class ConnectAuthorizationHandler implements RequestHandler<APIGatewayPro
         Map<String, String> headers = event.getHeaders();
 
         logger.debug("Received Authorization request: {} ", event);
-
+        
         String authorizationToken = headers.get(AUTHORIZATION_HEADER);
 
         logger.debug("Auth token: '{}'" + authorizationToken);
