@@ -3,13 +3,12 @@ package com.catapult.lds;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.apigatewaymanagementapi.AmazonApiGatewayManagementApiAsync;
 import com.amazonaws.services.apigatewaymanagementapi.AmazonApiGatewayManagementApiAsyncClientBuilder;
-import com.amazonaws.services.apigatewaymanagementapi.model.PostToConnectionRequest;
-import com.amazonaws.services.apigatewaymanagementapi.model.PostToConnectionResult;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
 import com.catapult.lds.service.SubscriptionCacheService;
+import com.catapult.lds.task.ConnectionMaintenanceTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,15 +101,16 @@ public class ConnectionMaintenanceHandler implements RequestHandler<APIGatewayV2
             return response;
         }
 
-        String connectionId = event.getRequestContext().getConnectionId();
-
-        this.logger.info("request's connection id: {} ", connectionId);
-        this.logger.info("open connections: {} ", subscriptionCacheService.getAllConnectionIds());
-
-        PostToConnectionRequest request = new PostToConnectionRequest();
-        PostToConnectionResult result = client.postToConnection(request);
-
-        this.logger.info("result of request: {} ", result);
+        try {
+            ConnectionMaintenanceTask.ConnectionMaintenanceResult taskResult =
+                    new ConnectionMaintenanceTask(subscriptionCacheService, client).call();
+        } catch (Exception e) {
+            logger.debug(e.getMessage());
+            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+            response.setStatusCode(HttpURLConnection.HTTP_GONE);
+            response.setBody(e.getMessage());
+            return response;
+        }
 
         APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
         response.setStatusCode(HttpURLConnection.HTTP_OK);

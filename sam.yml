@@ -216,10 +216,6 @@ Resources:
             Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
           LDS_REDIS_PORT:
             Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
-          LDS_WEBSOCKET:
-            Fn::ImportValue:
-              !Sub  '${ApiGatewayStack}:stage-connection-url'
-          LDS_WEBSOCKET_CONNECT_TIMEOUT_MILLISECONDS: 1000
 
   WebsocketSubscribeRequestFunctionApiGatewayPermission:
     Type: AWS::Lambda::Permission
@@ -405,7 +401,7 @@ Resources:
       RouteResponseKey: $default
     DependsOn:
       ApiGatewayDisconnectRoute
-  # Dead Connection Function
+  # Connection Maintenance Function
   ConnectionMaintenanceFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -419,10 +415,10 @@ Resources:
         - !Sub '${StackEnv}-of-lds-websocket-connection-maintenance'
       Handler: com.catapult.lds.ConnectionMaintenanceHandler::handleRequest
       PackageType: Zip
+      Policies:
+        - AmazonAPIGatewayInvokeFullAccess
       Runtime: java11
       MemorySize: 1024
-      ProvisionedConcurrencyConfig:
-        ProvisionedConcurrentExecutions: 1
       Timeout: 10
       Tracing: Active
       VpcConfig:
@@ -437,6 +433,10 @@ Resources:
             Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
           LDS_REDIS_PORT:
             Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
+          LDS_WEBSOCKET:
+            Fn::ImportValue:
+              !Sub  '${ApiGatewayStack}:stage-connection-url'
+          LDS_WEBSOCKET_CONNECT_TIMEOUT_MILLISECONDS: 1000
   ConnectionMaintenanceFunctionApiGatewayPermission:
     Type: AWS::Lambda::Permission
     Properties:
