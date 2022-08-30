@@ -26,6 +26,12 @@
             <artifactId>aws-lambda-java-events</artifactId>
             <version>3.11.0</version>
         </dependency>
+        <!-- AWS API Gateway dependency -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-apigatewaymanagementapi</artifactId>
+            <version>1.12.215</version>
+        </dependency>
         <!-- Log4j dependencies-->
         <dependency>
             <groupId>com.amazonaws</groupId>

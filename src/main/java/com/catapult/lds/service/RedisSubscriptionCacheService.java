@@ -6,7 +6,7 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
-import io.lettuce.core.api.sync.RedisHashCommands;
+import io.lettuce.core.api.sync.RedisSetCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +55,12 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      * The namespace for a connection key
      */
     private static final String CONNECTION_NAMESPACE = "$connection-id-";
+
+    /**
+     * The key for the set of known open connection ids.  The values stored in this set are connection ids, and not
+     * connection keys.
+     */
+    private static final String CONNECTIONS_KEY = "$connections";
 
     /**
      * Connection to AWS Elasticache redis cluster
@@ -112,28 +118,28 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         this.logger.info("creating connection '{}' ", connectionId);
 
-        RedisHashCommands<String, String> syncCommands = this.redisClient.sync();
+        RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         String connectionKey = this.connectionIdToKey(connectionId);
-        boolean success = syncCommands.hsetnx(connectionKey, CREATED_AT, "" + System.currentTimeMillis());
+
+        // make sure to track connections first, in order to troubleshoot dead connections later.
+        final boolean success = syncCommands.sadd(CONNECTIONS_KEY, connectionId) > 0;
 
         if (!success) {
             throw new SubscriptionException(String.format("Connection '%s' already exists in the cache.",
                     connectionId));
         }
+
+        syncCommands.hsetnx(connectionKey, CREATED_AT, "" + System.currentTimeMillis());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean connectionExists(String connectionId) {
-        assert connectionId != null;
-        String connectionKey = this.connectionIdToKey(connectionId);
-
-        RedisCommands<String, String> syncCommands = this.redisClient.sync();
-
-        return syncCommands.exists(connectionKey) > 0;
+    public Set<String> getAllConnectionIds() {
+        RedisSetCommands<String, String> syncCommands = this.redisClient.sync();
+        return syncCommands.smembers(CONNECTIONS_KEY);
     }
 
     /**
@@ -163,6 +169,10 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         remainingSubscriptionIds.forEach(k -> this.cancelSubscriptionInternal(connectionId, k)); // cancel all remaining subscriptions
 
         syncCommands.del(connectionKey);
+
+        // remove the connection id from the set of open connections
+        syncCommands.srem(CONNECTIONS_KEY, connectionId);
+
     }
 
     /**

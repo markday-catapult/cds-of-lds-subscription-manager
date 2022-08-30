@@ -23,11 +23,11 @@ public interface SubscriptionCacheService {
     void createConnection(String connectionId) throws SubscriptionException;
 
     /**
-     * Returns true if a connection with the given connection id exists in the cache, false otherwise.
+     * Returns the set of all open connection ids.
      *
-     * @pre connectionId != null
+     * @post return != null;
      */
-    boolean connectionExists(String connectionId);
+    Set<String> getAllConnectionIds();
 
     /**
      * Create an entry associated with the given connection id in the cache.
@@ -41,8 +41,8 @@ public interface SubscriptionCacheService {
      * Puts the given subscription into the cache.
      *
      * @throws SubscriptionException if the given subscription has a {@linkplain Subscription#getId subscription id}
-     *                               that is already associated with the {@linkplain Subscription#getConnectionId
-     *                               connection}.
+     *                               that is already associated with the
+     *                               {@linkplain Subscription#getConnectionId connection}.
      * @pre subscription != null
      */
     void addSubscription(Subscription subscription) throws SubscriptionException;
@@ -81,6 +81,5 @@ public interface SubscriptionCacheService {
      * @post return.size() = resourceIds.size()
      */
     Map<String, DenormalizedCacheValue> getDenormalizedConnectionsForResourceIds(Set<String> resourceIds);
-
 }
 

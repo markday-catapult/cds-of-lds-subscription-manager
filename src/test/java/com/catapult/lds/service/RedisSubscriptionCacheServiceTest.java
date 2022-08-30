@@ -54,8 +54,11 @@ public class RedisSubscriptionCacheServiceTest {
         StatefulRedisConnection<String, String> redisClient = RedisClient.create(redisURI).connect();
         List<String> keys = redisClient.sync().keys("*");
         this.logger.info("==========================");
-        keys.forEach(k -> this.logger.info(k + ": " + (redisClient.sync().type(k).equals("string") ?
-                redisClient.sync().get(k) : redisClient.sync().hgetall(k))));
+        keys.forEach(k -> this.logger.info(k + ": " + (
+                redisClient.sync().type(k).equals("string") ? redisClient.sync().get(k) :
+                        redisClient.sync().type(k).equals("set") ? redisClient.sync().smembers(k) :
+                                redisClient.sync().hgetall(k)))
+        );
     }
 
     @Test
@@ -71,11 +74,11 @@ public class RedisSubscriptionCacheServiceTest {
         String connectionId1 = UUID.randomUUID().toString();
 
         // connection id does not exist
-        Assert.assertFalse(cacheService.connectionExists(connectionId1));
+        Assert.assertFalse(cacheService.getAllConnectionIds().contains(connectionId1));
         cacheService.createConnection(connectionId1);
 
         // connection id exists in the cache
-        Assert.assertTrue(cacheService.connectionExists(connectionId1));
+        Assert.assertTrue(cacheService.getAllConnectionIds().contains(connectionId1));
 
         // trying to create another connection with the same id throws an exception
         Assert.assertThrows(SubscriptionException.class, () -> cacheService.createConnection(connectionId1));
