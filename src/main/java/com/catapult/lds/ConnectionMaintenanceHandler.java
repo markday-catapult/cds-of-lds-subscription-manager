@@ -13,8 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.StandardCharsets;
 
 /**
  * {@code ConnectionMaintenanceHandler} is an implementation of {@link RequestHandler} that handles cleanup and removal
@@ -65,16 +63,7 @@ public class ConnectionMaintenanceHandler implements RequestHandler<APIGatewayV2
      */
     private final AmazonApiGatewayManagementApiAsync client;
 
-    /**
-     * The charset encoder used by this websocket manager.
-     *
-     * @invariant encoder != null
-     */
-    private final CharsetEncoder encoder;
-
     {
-        logger.debug("WebsocketManagerImpl default constructor");
-
         String signingRegion = System.getenv(AWS_REGION_ENV);
         String websocketConnectionUrl = System.getenv(WEBSOCKET_CONNECTION_URL_ENV);
         connectionTimeout = Integer.parseInt(System.getenv(WEBSOCKET_CONNECTION_TIMEOUT_ENV));
@@ -84,8 +73,6 @@ public class ConnectionMaintenanceHandler implements RequestHandler<APIGatewayV2
                 new AwsClientBuilder.EndpointConfiguration(websocketConnectionUrl, signingRegion);
         builder.setEndpointConfiguration(config);
         client = builder.build();
-        encoder = StandardCharsets.UTF_8.newEncoder();
-
     }
 
     /**
