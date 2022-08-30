@@ -36,7 +36,7 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
     private final SubscriptionCacheService subscriptionCacheService;
 
     /**
-     * The asynchronous api client used by this websocket manager.
+     * The asynchronous api client used by this task.
      *
      * @invariant client != null
      */
@@ -57,7 +57,7 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
 
         ConnectionMaintenanceResult taskResult = new ConnectionMaintenanceResult();
 
-        this.logger.info("open connections: {} ", connectionIds);
+        this.logger.debug("open connections: {} ", connectionIds);
 
         for (String connectionId : connectionIds) {
             // check to see if the connection is still valid
@@ -75,10 +75,10 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
 
             if (connectedAt != null) {
                 taskResult.existingConnections.add(connectionId);
-                this.logger.info("connection '{}' connected at {}.", connectionId, connectedAt);
+                this.logger.debug("connection '{}' connected at {}.", connectionId, connectedAt);
             } else {
                 taskResult.cleanedUpConnections.add(connectionId);
-                this.logger.info("connection '{}' was GONE, closing connection.", connectionId);
+                this.logger.debug("connection '{}' was GONE, closing connection.", connectionId);
                 try {
                     subscriptionCacheService.closeConnection(connectionId);
                 } catch (SubscriptionException e) {
@@ -88,6 +88,7 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
             }
         }
 
+        this.logger.info("connections cleaned up:", taskResult.cleanedUpConnections);
         return taskResult;
     }
 
