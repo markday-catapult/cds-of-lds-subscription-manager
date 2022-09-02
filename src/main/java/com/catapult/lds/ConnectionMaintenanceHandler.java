@@ -9,6 +9,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
 import com.catapult.lds.service.SubscriptionCacheService;
 import com.catapult.lds.task.ConnectionMaintenanceTask;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +42,13 @@ public class ConnectionMaintenanceHandler implements RequestHandler<APIGatewayV2
      * @invariant subscriptionCacheService != null
      */
     private static final SubscriptionCacheService subscriptionCacheService = Util.cacheService;
+
+    /**
+     * The object mapper used by this handler.
+     *
+     * @invariant objectMapper != null;
+     */
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * The logger used by this handler.
@@ -88,9 +96,15 @@ public class ConnectionMaintenanceHandler implements RequestHandler<APIGatewayV2
             return response;
         }
 
+        boolean dumpCache = false;
+
+        final String responseBody;
         try {
             ConnectionMaintenanceTask.ConnectionMaintenanceResult taskResult =
-                    new ConnectionMaintenanceTask(subscriptionCacheService, client).call();
+                    new ConnectionMaintenanceTask(subscriptionCacheService, client, dumpCache).call();
+
+            responseBody = dumpCache ? objectMapper.writeValueAsString(taskResult) : "ok";
+
         } catch (Exception e) {
             logger.debug(e.getMessage());
             APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
@@ -101,7 +115,7 @@ public class ConnectionMaintenanceHandler implements RequestHandler<APIGatewayV2
 
         APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
         response.setStatusCode(HttpURLConnection.HTTP_OK);
-        response.setBody("ok");
+        response.setBody(responseBody);
         return response;
     }
 }

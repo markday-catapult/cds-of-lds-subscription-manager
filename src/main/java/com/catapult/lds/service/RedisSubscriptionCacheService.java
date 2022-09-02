@@ -6,12 +6,13 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
-import io.lettuce.core.api.sync.RedisSetCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -116,7 +117,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     public void createConnection(String connectionId) throws SubscriptionException {
         assert connectionId != null;
 
-        this.logger.info("creating connection '{}' ", connectionId);
+        this.logger.debug("creating connection '{}' ", connectionId);
 
         RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
@@ -138,8 +139,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
      */
     @Override
     public Set<String> getAllConnectionIds() {
-        RedisSetCommands<String, String> syncCommands = this.redisClient.sync();
-        return syncCommands.smembers(CONNECTIONS_KEY);
+        return this.redisClient.sync().smembers(CONNECTIONS_KEY);
     }
 
     /**
@@ -149,7 +149,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     public void closeConnection(String connectionId) throws SubscriptionException {
         assert connectionId != null;
 
-        this.logger.info("closing connection {} ", connectionId);
+        this.logger.debug("closing connection {} ", connectionId);
 
         RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
@@ -164,7 +164,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                 .filter(k -> !CREATED_AT.equals(k))
                 .collect(Collectors.toSet());
 
-        this.logger.info("removing all remaining subscriptions {} ", remainingSubscriptionIds);
+        this.logger.debug("removing all remaining subscriptions {} ", remainingSubscriptionIds);
 
         remainingSubscriptionIds.forEach(k -> this.cancelSubscriptionInternal(connectionId, k)); // cancel all remaining subscriptions
 
@@ -203,7 +203,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         String subscriptionId = subscription.getId();
         String connectionKey = this.connectionIdToKey(connectionId);
 
-        this.logger.info("creating subscription '{}' for connection '{}'", subscriptionId, connectionId);
+        this.logger.debug("creating subscription '{}' for connection '{}'", subscriptionId, connectionId);
 
         if (syncCommands.exists(connectionKey) == 0) {
             throw new SubscriptionException(String.format("Connection '%s' does not exist in the cache.",
@@ -382,6 +382,24 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         assert resourceIds.size() == connectionsByResourceId.size();
 
         return connectionsByResourceId;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Map<String, Object> dumpCache() {
+        Set<String> keys = new HashSet<>(redisClient.sync().keys("*"));
+
+        Map<String, Object> cache = new HashMap<>();
+        for (String k : keys) {
+            String type = redisClient.sync().type(k);
+            if (type.equals("string")) cache.put(k, redisClient.sync().get(k));
+            else if (type.equals("set")) cache.put(k, redisClient.sync().smembers(k));
+            else cache.put(k, redisClient.sync().hgetall(k));
+        }
+
+        return cache;
     }
 
     /**

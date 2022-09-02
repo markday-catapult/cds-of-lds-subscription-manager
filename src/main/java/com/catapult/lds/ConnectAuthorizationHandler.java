@@ -75,7 +75,7 @@ public class ConnectAuthorizationHandler implements RequestHandler<APIGatewayPro
         Map<String, String> headers = event.getHeaders();
 
         logger.debug("Received Authorization request: {} ", event);
-        
+
         String authorizationToken = headers.get(AUTHORIZATION_HEADER);
 
         logger.debug("Auth token: '{}'" + authorizationToken);
@@ -115,7 +115,7 @@ public class ConnectAuthorizationHandler implements RequestHandler<APIGatewayPro
         ObjectMapper mapper = new ObjectMapper();
 
         try {
-            logger.info("Policy document: " + mapper.writeValueAsString(policyDocument));
+            logger.debug("Policy document: " + mapper.writeValueAsString(policyDocument));
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }

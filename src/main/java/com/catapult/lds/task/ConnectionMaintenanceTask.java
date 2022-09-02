@@ -10,12 +10,15 @@ import com.catapult.lds.service.SubscriptionException;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
@@ -43,6 +46,8 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
     @NonNull
     private final AmazonApiGatewayManagementApiAsync client;
 
+    private final boolean dumpCache;
+
     /**
      * The logger used by this task
      *
@@ -53,11 +58,10 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
 
     @Override
     public ConnectionMaintenanceResult call() throws Exception {
-        Set<String> connectionIds = subscriptionCacheService.getAllConnectionIds();
-
         ConnectionMaintenanceResult taskResult = new ConnectionMaintenanceResult();
 
-        this.logger.debug("open connections: {} ", connectionIds);
+        Set<String> connectionIds = subscriptionCacheService.getAllConnectionIds();
+        this.logger.debug("cache recorded open connections: {} ", connectionIds);
 
         for (String connectionId : connectionIds) {
             // check to see if the connection is still valid
@@ -74,7 +78,7 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
             }
 
             if (connectedAt != null) {
-                taskResult.existingConnections.add(connectionId);
+                taskResult.preservedConnections.add(connectionId);
                 this.logger.debug("connection '{}' connected at {}.", connectionId, connectedAt);
             } else {
                 taskResult.cleanedUpConnections.add(connectionId);
@@ -88,13 +92,25 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
             }
         }
 
-        this.logger.info("connections cleaned up:", taskResult.cleanedUpConnections);
+        if (dumpCache) {
+            taskResult.databaseDump.putAll(subscriptionCacheService.dumpCache());
+        }
+
+        this.logger.debug("{} connections preserved: {}",
+                taskResult.preservedConnections.size(),
+                taskResult.preservedConnections);
+        this.logger.debug("{} connections cleaned up: {}",
+                taskResult.cleanedUpConnections.size(),
+                taskResult.cleanedUpConnections);
+
         return taskResult;
     }
 
     @Value
+    @Jacksonized
     public static class ConnectionMaintenanceResult {
-        private Collection<String> existingConnections = new HashSet<>();
+        private Collection<String> preservedConnections = new HashSet<>();
         private Collection<String> cleanedUpConnections = new HashSet<>();
+        private Map<String, Object> databaseDump = new HashMap<>();
     }
 }

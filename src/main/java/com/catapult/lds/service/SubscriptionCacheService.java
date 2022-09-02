@@ -81,5 +81,14 @@ public interface SubscriptionCacheService {
      * @post return.size() = resourceIds.size()
      */
     Map<String, DenormalizedCacheValue> getDenormalizedConnectionsForResourceIds(Set<String> resourceIds);
+
+    /**
+     * Returns the entire cache.  This method is not guaranteed to be performant, and must only be called for
+     *  maintenance purposes.
+     *
+     *  @post return != null
+     */
+    Map<String, Object> dumpCache();
+
 }
 
