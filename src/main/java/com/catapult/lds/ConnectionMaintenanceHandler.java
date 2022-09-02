@@ -44,14 +44,14 @@ public class ConnectionMaintenanceHandler implements RequestHandler<APIGatewayV2
     private static final SubscriptionCacheService subscriptionCacheService = Util.cacheService;
 
     /**
-     * The object mapper used by this handler.
+     * The object mapper used by all instances of this handler.
      *
      * @invariant objectMapper != null;
      */
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * The logger used by this handler.
+     * The logger used by all instances of this handler.
      *
      * @invariant logger != null
      */

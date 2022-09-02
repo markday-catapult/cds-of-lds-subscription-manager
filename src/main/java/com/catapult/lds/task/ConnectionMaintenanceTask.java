@@ -46,6 +46,9 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
     @NonNull
     private final AmazonApiGatewayManagementApiAsync client;
 
+    /**
+     * If false, the task will execute the normal maintenance.  If true, the cache dump will be executed as well.
+     */
     private final boolean dumpCache;
 
     /**
@@ -61,7 +64,7 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
         ConnectionMaintenanceResult taskResult = new ConnectionMaintenanceResult();
 
         Set<String> connectionIds = subscriptionCacheService.getAllConnectionIds();
-        this.logger.debug("cache recorded open connections: {} ", connectionIds);
+        this.logger.debug("cache has a record of {} open connections: {} ", connectionIds.size(), connectionIds);
 
         for (String connectionId : connectionIds) {
             // check to see if the connection is still valid
