@@ -51,8 +51,8 @@ public class DisconnectHandler implements RequestHandler<APIGatewayV2WebSocketEv
             return response;
         }
 
-        logger.debug("Disconnecting connection: '{}'", connectionId);
-        
+        this.logger.info("{} invoked for connection: '{}'", this.getClass().getSimpleName(), connectionId);
+
         try {
             subscriptionCacheService.closeConnection(connectionId);
             APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();

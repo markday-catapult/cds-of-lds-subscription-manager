@@ -46,6 +46,8 @@ public class ConnectHandler implements RequestHandler<APIGatewayV2WebSocketEvent
         try {
             String connectionId = event.getRequestContext().getConnectionId();
 
+            this.logger.info("{} invoked for connection: '{}'", this.getClass().getSimpleName(), connectionId);
+
             if (connectionId == null) {
                 APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
                 response.setStatusCode(HttpURLConnection.HTTP_BAD_REQUEST);

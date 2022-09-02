@@ -62,7 +62,7 @@ public class UnsubscribeRequestHandler implements RequestHandler<APIGatewayV2Web
             return response;
         }
 
-        logger.debug("Received unsubscribe request from connection: '{}'", connectionId);
+        this.logger.info("{} invoked for connection: '{}'", this.getClass().getSimpleName(), connectionId);
 
         final UnsubscribeRequest unsubscribeRequest;
 

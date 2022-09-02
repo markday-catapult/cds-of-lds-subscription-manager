@@ -32,10 +32,10 @@ Globals:
         DD_SITE: datadoghq.com
         DD_API_KEY: "{{resolve:secretsmanager:datadog-api-key}}"
         DD_ENV: !Sub '${StackEnv}'
+        AWS_LAMBDA_EXEC_WRAPPER: /opt/datadog_wrapper
     Layers:
       - !Sub 'arn:aws:lambda:${AWS::Region}:464622532012:layer:Datadog-Extension:25'
       - !Sub 'arn:aws:lambda:${AWS::Region}:464622532012:layer:dd-trace-java:4'
-      - !Sub 'arn:aws:lambda:${AWS::Region}:901920570463:layer:aws-otel-java-agent-amd64-ver-1-14-0:3'
 
 Parameters:
   StackNamespace:

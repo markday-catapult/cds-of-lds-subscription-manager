@@ -85,7 +85,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
             return response;
         }
 
-        logger.debug("Received subscribe request from connection: '{}'", connectionId);
+        this.logger.info("{} invoked for connection: '{}'", this.getClass().getSimpleName(), connectionId);
 
         // Deserialize and validate the request
         try {
@@ -94,11 +94,11 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
 
             if (subscriptionRequest.requestId == null ||
                     subscriptionRequest.dataClass == null ||
-                    subscriptionRequest.resources == null ) {
+                    subscriptionRequest.resources == null) {
                 return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
                         subscriptionRequest.requestId, "Subscription request missing required fields");
             }
-            if(subscriptionRequest.getNamespacedResources().isEmpty()){
+            if (subscriptionRequest.getNamespacedResources().isEmpty()) {
                 return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
                         subscriptionRequest.requestId, "Subscription request missing resources");
 
@@ -152,25 +152,25 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
          */
         public Set<String> getNamespacedResources() {
             Set<String> nameSpacedResources = new HashSet<>();
-            if(Objects.nonNull(this.resources.athleteIds)){
-                nameSpacedResources.addAll(this.resources.athleteIds.stream().map(a-> String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
+            if (Objects.nonNull(this.resources.athleteIds)) {
+                nameSpacedResources.addAll(this.resources.athleteIds.stream().map(a -> String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
                         dataClass,
                         ResourceNameSpace.ATHLETE.value(),
                         a)).collect(toSet()));
             }
-            if(Objects.nonNull(this.resources.deviceIds)){
-                nameSpacedResources.addAll(this.resources.deviceIds.stream().map(d-> String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
+            if (Objects.nonNull(this.resources.deviceIds)) {
+                nameSpacedResources.addAll(this.resources.deviceIds.stream().map(d -> String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
                         dataClass,
                         ResourceNameSpace.DEVICE.value(),
                         d)).collect(toSet()));
             }
-            if(Objects.nonNull(this.resources.userIds)){
-                nameSpacedResources.addAll(this.resources.userIds.stream().map(u-> String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
+            if (Objects.nonNull(this.resources.userIds)) {
+                nameSpacedResources.addAll(this.resources.userIds.stream().map(u -> String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
                         dataClass,
                         ResourceNameSpace.USER.value(),
                         u)).collect(toSet()));
             }
-            return  nameSpacedResources;
+            return nameSpacedResources;
         }
 
         /**
