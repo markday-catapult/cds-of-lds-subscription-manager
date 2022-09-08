@@ -96,7 +96,7 @@ public class ConnectionMaintenanceHandler implements RequestHandler<APIGatewayV2
             return response;
         }
 
-        boolean dumpCache = false;
+        boolean dumpCache = true;
 
         final String responseBody;
         try {
