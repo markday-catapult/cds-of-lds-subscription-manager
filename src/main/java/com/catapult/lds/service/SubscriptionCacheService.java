@@ -85,17 +85,21 @@ public interface SubscriptionCacheService {
 
     /**
      * Returns the entire cache.  This method is not guaranteed to be performant, and must only be called for
-     *  maintenance purposes.
+     * maintenance purposes.
      *
      *  @post return != null
      */
     Map<String, Object> dumpCache();
 
     /**
-     * Cleans the denormalized cache
+     * Cleans the denormalized cache.  This method is not guaranteed to be performant, and must only be called for 
+     * maintenance purposes.
      *
-     * @param deadConnectionFilter is a filter that takes a list of connection ids and returns only the connection ids
-     *                                                that are not currently active
+     *
+     * @param deadConnectionFilter is a filter that takes a list of connection ids and returns only the connection
+     *                             ids that are dead
+     *
+     * @pre deadConnectionFilter != null
      */
     public void cleanCache(Function<Set<String>, Set<String>> deadConnectionFilter);
 }

@@ -107,26 +107,24 @@ public class DenormalizedCacheValue {
     }
 
     /**
-     * Dissociates the all the subscriptions given connection id in this cache value
+     * Dissociates the all the subscriptions for the given connection id in this cache value
      *
      * @pre connectionId != null
      */
     public void removeConnection(String connectionId) {
         assert connectionId != null;
 
-        Optional<ConnectionSubscriptions> optionalConnection = this.connectionSubscriptions
+        Set<ConnectionSubscriptions> connectionSubscriptions = this.connectionSubscriptions
                 .stream()
                 .filter(c -> c.connectionId.equals(connectionId))
-                .findFirst();
+                .collect(Collectors.toSet());
 
-        if (optionalConnection.isEmpty()) {
-            logger.debug("Could not remove connection {}:  Connection not" +
-                    " found.", connectionId);
+        if (connectionSubscriptions.isEmpty()) {
+            logger.debug("Could not remove connection {}:  Connection not found.", connectionId);
             return;
         }
 
-        ConnectionSubscriptions connection = optionalConnection.get();
-        this.connectionSubscriptions.remove(connection);
+        this.connectionSubscriptions.remove(connectionSubscriptions);
     }
 
     /**

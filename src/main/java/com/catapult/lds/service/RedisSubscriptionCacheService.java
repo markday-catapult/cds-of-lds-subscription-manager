@@ -403,7 +403,12 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         return cache;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public void cleanCache(Function<Set<String>, Set<String>> deadConnectionFilter) {
+        assert deadConnectionFilter != null;
+
         this.logger.info("cleaning cache");
 
         var denormalizedCacheValuesByKey =
@@ -419,7 +424,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
             var connectionIds = denormalizedCacheValue.getConnectionIds();
             var deadConnectionIds = deadConnectionFilter.apply(connectionIds);
 
-            this.logger.info("Got {} total connections, {} of which are dead.  Removing {} from {} ",
+            this.logger.debug("Got {} total connections, {} of which are dead.  Removing {} from {} ",
                     connectionIds.size(),
                     deadConnectionIds.size(),
                     deadConnectionIds,
@@ -438,13 +443,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                                 es -> es.getValue().getSerializedConnectionList()));
 
         // remove denormalized connections from a device if the list of subscriptions is empty
-
-        this.logger.trace("modifiedResources: {} " + resourcesToModify);
-
-        // delete resource cache
-//        if (resourcesToDelete.size() > 0) {
-//            syncCommands.del(resourcesToDelete.toArray(String[]::new));
-//        }
+        this.logger.debug("modifiedResources: {} " + resourcesToModify);
 
         // modify resource cache entries
         if (resourcesToModify.size() > 0) {
