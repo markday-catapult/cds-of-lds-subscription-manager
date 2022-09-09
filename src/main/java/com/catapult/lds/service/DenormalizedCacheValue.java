@@ -124,7 +124,7 @@ public class DenormalizedCacheValue {
             return;
         }
 
-        this.connectionSubscriptions.remove(connectionSubscriptions);
+        this.connectionSubscriptions.removeAll(connectionSubscriptions);
     }
 
     /**

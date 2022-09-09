@@ -92,7 +92,7 @@ public interface SubscriptionCacheService {
     Map<String, Object> dumpCache();
 
     /**
-     * Cleans the denormalized cache.  This method is not guaranteed to be performant, and must only be called for 
+     * Cleans the denormalized cache.  This method is not guaranteed to be performant, and must only be called for
      * maintenance purposes.
      *
      *
