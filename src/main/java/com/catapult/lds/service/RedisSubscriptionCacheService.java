@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -400,6 +401,54 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         }
 
         return cache;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void cleanCache(Function<Set<String>, Set<String>> deadConnectionFilter) {
+        assert deadConnectionFilter != null;
+
+        this.logger.info("cleaning cache");
+
+        var denormalizedCacheValuesByKey =
+                getDenormalizedConnectionsForResourceIds(this.dumpCache().keySet().stream().filter(s -> !s.startsWith(
+                        "$connection")).collect(Collectors.toSet()));
+
+        Set<String> denormalizedCacheEntriesToRemove = new HashSet<>();
+
+        for (var entry : denormalizedCacheValuesByKey.entrySet()) {
+            String resourceId = entry.getKey();
+            DenormalizedCacheValue denormalizedCacheValue = entry.getValue();
+
+            var connectionIds = denormalizedCacheValue.getConnectionIds();
+            var deadConnectionIds = deadConnectionFilter.apply(connectionIds);
+
+            this.logger.debug("Got {} total connections, {} of which are dead.  Removing {} from {} ",
+                    connectionIds.size(),
+                    deadConnectionIds.size(),
+                    deadConnectionIds,
+                    connectionIds);
+
+            for (String deadConnection : deadConnectionIds) {
+                denormalizedCacheValue.removeConnection(deadConnection);
+            }
+        }
+
+        Map<String, String> resourcesToModify =
+                denormalizedCacheValuesByKey.entrySet()
+                        .stream()
+                        .collect(Collectors.toMap(
+                                es -> es.getKey(),
+                                es -> es.getValue().getSerializedConnectionList()));
+
+        // remove denormalized connections from a device if the list of subscriptions is empty
+        this.logger.debug("modifiedResources: {} " + resourcesToModify);
+
+        // modify resource cache entries
+        if (resourcesToModify.size() > 0) {
+            this.redisClient.sync().mset(resourcesToModify);
+        }
     }
 
     /**

@@ -3,6 +3,7 @@ package com.catapult.lds.service;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * {@code SubscriptionCacheService} provides methods for storing and retrieving information about subscriptions.
@@ -84,11 +85,22 @@ public interface SubscriptionCacheService {
 
     /**
      * Returns the entire cache.  This method is not guaranteed to be performant, and must only be called for
-     *  maintenance purposes.
+     * maintenance purposes.
      *
      *  @post return != null
      */
     Map<String, Object> dumpCache();
 
+    /**
+     * Cleans the denormalized cache.  This method is not guaranteed to be performant, and must only be called for
+     * maintenance purposes.
+     *
+     *
+     * @param deadConnectionFilter is a filter that takes a list of connection ids and returns only the connection
+     *                             ids that are dead
+     *
+     * @pre deadConnectionFilter != null
+     */
+    public void cleanCache(Function<Set<String>, Set<String>> deadConnectionFilter);
 }
 

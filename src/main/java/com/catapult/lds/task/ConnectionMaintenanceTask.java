@@ -21,6 +21,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * {@code ConnectionMaintenanceTask} is a task that performs subscription maintenance and cleanup.  As the
@@ -44,7 +46,7 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
      * @invariant client != null
      */
     @NonNull
-    private final AmazonApiGatewayManagementApiAsync client;
+    private final AmazonApiGatewayManagementApiAsync apiGatewayClient;
 
     /**
      * If false, the task will execute the normal maintenance.  If true, the cache dump will be executed as well.
@@ -63,6 +65,10 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
     public ConnectionMaintenanceResult call() throws Exception {
         ConnectionMaintenanceResult taskResult = new ConnectionMaintenanceResult();
 
+        if (this.dumpCache) {
+            taskResult.databaseDumpPreCleanup.putAll(subscriptionCacheService.dumpCache());
+        }
+
         Set<String> connectionIds = subscriptionCacheService.getAllConnectionIds();
         this.logger.debug("cache has a record of {} open connections: {} ", connectionIds.size(), connectionIds);
 
@@ -74,7 +80,7 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
             Date connectedAt;
 
             try {
-                GetConnectionResult result = client.getConnection(request);
+                GetConnectionResult result = apiGatewayClient.getConnection(request);
                 connectedAt = result.getConnectedAt();
             } catch (GoneException e) {
                 connectedAt = null;
@@ -95,8 +101,23 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
             }
         }
 
-        if (dumpCache) {
-            taskResult.databaseDump.putAll(subscriptionCacheService.dumpCache());
+        // function that returns the set of all connections that are not active
+        Function<Set<String>, Set<String>> deadConnectionFilter =
+                x -> x.stream().filter(s -> {
+                    try {
+                        GetConnectionRequest request = new GetConnectionRequest();
+                        request.setConnectionId(s);
+                        this.apiGatewayClient.getConnection(request);
+                        return false;
+                    } catch (GoneException e) {
+                        return true;
+                    }
+                }).collect(Collectors.toSet());
+
+        subscriptionCacheService.cleanCache(deadConnectionFilter);
+
+        if (this.dumpCache) {
+            taskResult.databaseDumpPostCleanup.putAll(subscriptionCacheService.dumpCache());
         }
 
         this.logger.debug("{} connections preserved: {}",
@@ -114,6 +135,7 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
     public static class ConnectionMaintenanceResult {
         private Collection<String> preservedConnections = new HashSet<>();
         private Collection<String> cleanedUpConnections = new HashSet<>();
-        private Map<String, Object> databaseDump = new HashMap<>();
+        private Map<String, Object> databaseDumpPreCleanup = new HashMap<>();
+        private Map<String, Object> databaseDumpPostCleanup = new HashMap<>();
     }
 }
