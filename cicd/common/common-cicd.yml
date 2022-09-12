@@ -6,18 +6,17 @@ variables:
   SAM_PACKAGE_FILE: "packaged.yml"
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
   ENV_DEPLOY_NAMESPACE:
-    Description: "The namespace of this deployment.  This allows multiple versions of the application to be deployed to the same region"
-    Value: ""
+    description: "The namespace of this deployment.  This allows multiple versions of the application to be deployed to the same region"
+    value: ""
   ENV_DEPLOY_ENVIRONMENT:
-    Description: "The environment for this deployment.  Valid options are 'dev', 'test', 'integration' and 'production'"
-    Value: ""
+    description: "The environment for this deployment.  Valid options are 'dev', 'test', 'integration' and 'production'"
+    value: ""
   ENV_DEPLOY_SCOPE:
-    Description: "The scope product family of this application.  This is usually something like 'lds'".
-    Value: "lds"
+    description: "The scope product family of this application.  This is usually something like 'lds'."
+    value: "lds"
   ENV_DEPLOY_REGION:
-    Description: "The region to deploy the application."
-    Value: ""
-
+    description: "The region to deploy the application."
+    value: ""
 
 cache:
   paths:
