@@ -5,6 +5,19 @@ variables:
   SHOW_ENVIRONMENT_INFO: "true"
   SAM_PACKAGE_FILE: "packaged.yml"
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  ENV_DEPLOY_NAMESPACE:
+    Description: "The namespace of this deployment.  This allows multiple versions of the application to be deployed to the same region"
+    Value: ""
+  ENV_DEPLOY_ENVIRONMENT:
+    Description: "The environment for this deployment.  Valid options are 'dev', 'test', 'integration' and 'production'"
+    Value: ""
+  ENV_DEPLOY_SCOPE:
+    Description: "The scope product family of this application.  This is usually something like 'lds'".
+    Value: "lds"
+  ENV_DEPLOY_REGION:
+    Description: "The region to deploy the application."
+    Value: ""
+
 
 cache:
   paths:
@@ -28,9 +41,9 @@ cache:
       echo "CI_DEFAULT_BRANCH:        $CI_DEFAULT_BRANCH"
       echo "ENV_DEPLOY_NAMESPACE:     $ENV_DEPLOY_NAMESPACE"
       echo "ENV_DEPLOY_ENVIRONMENT:   $ENV_DEPLOY_ENVIRONMENT"
-      echo "ENV_DEPLOY_REGION:        $ENV_DEPLOY_REGION"
       echo "ENV_DEPLOY_SCOPE:         $ENV_DEPLOY_SCOPE"
-      echo "SAM_CONFIG_ENV:           $SAM_CONFIG_ENV"
+      echo "ENV_DEPLOY_REGION:        $ENV_DEPLOY_REGION"
+      echo "ENV_STACK_VPC:            $ENV_STACK_VPC"
     fi
 
 
@@ -56,18 +69,12 @@ workflow:
 
 # provides configuration for jobs running after a merge to the default branch
 .execute-on-commit-to-merge-request:
-  variables:
-    CATAPULT_DEPLOY_ENVIRONMENT: $ACCOUNT_ID_NPE
-    CATAPULT_DEPLOY_REGION: $AWS_CICD_REGION
   rules:
     - if: '$CATAPULT_WORKFLOW_ACTION == "commit_to_open_merge_request"'
       when: on_success
       allow_failure: false
 
 .execute-on-merge-to-default:
-  variables:
-    CATAPULT_DEPLOY_ENVIRONMENT: $ACCOUNT_ID_NPE
-    CATAPULT_DEPLOY_REGION: $AWS_CICD_REGION
   rules:
     - if: '$CATAPULT_WORKFLOW_ACTION == "merge_to_default_branch"'
       when: on_success
@@ -93,25 +100,27 @@ workflow:
 
 # Deploy a SAM function to aws infrastructure. When executed, this job rebuilds the application before packaging it.
 .deploy-sam-lambda:
+  variables:
+    ENV_STACK_VPC: "${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${ENV_DEPLOY_SCOPE}-vpc"
+    ENV_STACK_REDIS: "${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${ENV_DEPLOY_SCOPE}-elasticache-redis"
+    ENV_STACK_KINESIS: "${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${ENV_DEPLOY_SCOPE}-kinesis"
+    ENV_STACK_API_GATEWAY: "${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${ENV_DEPLOY_SCOPE}-api-gateway"
   stage: deploy
   before_script:
     - !reference [ .show-cicd-environment ]
   script:
     - sam build -t sam.yml
     - sam package
-      --config-file samconfig.toml
-      --config-env ${SAM_CONFIG_ENV}
       --output-template-file ${SAM_PACKAGE_FILE}
       --region ${ENV_DEPLOY_REGION}
       --s3-bucket lambda-deploy-lds-${ENV_DEPLOY_REGION}
       --s3-prefix ${APPLICATION_NAME}/${ENV_DEPLOY_ENVIRONMENT}
     - sam deploy
       --stack-name ${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${APPLICATION_NAME}
-      --config-file samconfig.toml
-      --config-env ${SAM_CONFIG_ENV}
       --template-file ${SAM_PACKAGE_FILE}
       --region ${ENV_DEPLOY_REGION}
       --no-fail-on-empty-changeset
+      --capabilities CAPABILITY_IAM
       --parameter-overrides
       VersionId=${CI_COMMIT_SHORT_SHA}
       StackNamespace=${ENV_DEPLOY_NAMESPACE}
@@ -133,17 +142,19 @@ build-lambda:
 
 deploy-lambda-integration:
   variables:
-    SAM_CONFIG_ENV: "cicd-integration"
     ENV_DEPLOY_NAMESPACE: "cicd"
     ENV_DEPLOY_ENVIRONMENT: "integration"
-    ENV_DEPLOY_REGION: "ap-southeast-2"
     ENV_DEPLOY_SCOPE: "lds"
-    ENV_STACK_VPC: "cicd-integration-lds-vpc"
-    ENV_STACK_REDIS: "cicd-integration-lds-elasticache-redis"
-    ENV_STACK_KINESIS: "cicd-integration-lds-kinesis"
-    ENV_STACK_API_GATEWAY: "cicd-integration-lds-api-gateway "
+    ENV_DEPLOY_REGION: "ap-southeast-2"
   extends:
     - .execute-on-merge-to-default
+    - .deploy-sam-lambda
+  tags:
+    - lds-npe-deploy
+
+deploy-lambda-manual:
+  extends:
+    - .execute-web-trigger
     - .deploy-sam-lambda
   tags:
     - lds-npe-deploy
