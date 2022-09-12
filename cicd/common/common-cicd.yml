@@ -43,6 +43,9 @@ cache:
       echo "ENV_DEPLOY_SCOPE:         $ENV_DEPLOY_SCOPE"
       echo "ENV_DEPLOY_REGION:        $ENV_DEPLOY_REGION"
       echo "ENV_STACK_VPC:            $ENV_STACK_VPC"
+      echo "ENV_STACK_REDIS:          $ENV_STACK_REDIS"
+      echo "ENV_STACK_KINESIS:        $ENV_STACK_KINESIS"
+      echo "ENV_STACK_API_GATEWAY:    $ENV_STACK_API_GATEWAY"
     fi
 
 
