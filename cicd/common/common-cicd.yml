@@ -42,6 +42,7 @@ cache:
       echo "ENV_DEPLOY_ENVIRONMENT:   $ENV_DEPLOY_ENVIRONMENT"
       echo "ENV_DEPLOY_SCOPE:         $ENV_DEPLOY_SCOPE"
       echo "ENV_DEPLOY_REGION:        $ENV_DEPLOY_REGION"
+      echo "ENV_STACK_NAME:           $ENV_STACK_NAME"
       echo "ENV_STACK_VPC:            $ENV_STACK_VPC"
       echo "ENV_STACK_REDIS:          $ENV_STACK_REDIS"
       echo "ENV_STACK_KINESIS:        $ENV_STACK_KINESIS"
@@ -107,6 +108,7 @@ workflow:
     ENV_STACK_REDIS: "${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${ENV_DEPLOY_SCOPE}-elasticache-redis"
     ENV_STACK_KINESIS: "${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${ENV_DEPLOY_SCOPE}-kinesis"
     ENV_STACK_API_GATEWAY: "${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${ENV_DEPLOY_SCOPE}-api-gateway"
+    ENV_STACK_NAME: "${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${APPLICATION_NAME}"
   stage: deploy
   before_script:
     - !reference [ .show-cicd-environment ]
@@ -118,7 +120,7 @@ workflow:
       --s3-bucket lambda-deploy-lds-${ENV_DEPLOY_REGION}
       --s3-prefix ${APPLICATION_NAME}/${ENV_DEPLOY_ENVIRONMENT}
     - sam deploy
-      --stack-name ${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${APPLICATION_NAME}
+      --stack-name ${ENV_STACK_NAME}
       --template-file ${SAM_PACKAGE_FILE}
       --region ${ENV_DEPLOY_REGION}
       --no-fail-on-empty-changeset
