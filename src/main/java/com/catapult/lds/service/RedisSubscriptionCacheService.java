@@ -124,15 +124,15 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         String connectionKey = this.connectionIdToKey(connectionId);
 
-        // make sure to track connections first, in order to troubleshoot dead connections later.
-        final boolean success = syncCommands.sadd(CONNECTIONS_KEY, connectionId) > 0;
-
-        if (!success) {
+        if( ! syncCommands.smembers(CONNECTIONS_KEY).contains(connectionId)){
+            syncCommands.multi();
+            syncCommands.sadd(CONNECTIONS_KEY,connectionId);
+            syncCommands.hsetnx(connectionKey, CREATED_AT, "" + System.currentTimeMillis());
+            syncCommands.exec();
+        }else{
             throw new SubscriptionException(String.format("Connection '%s' already exists in the cache.",
                     connectionId));
         }
-
-        syncCommands.hsetnx(connectionKey, CREATED_AT, "" + System.currentTimeMillis());
     }
 
     /**
