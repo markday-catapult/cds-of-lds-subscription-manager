@@ -167,12 +167,18 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         this.logger.debug("removing all remaining subscriptions {} ", remainingSubscriptionIds);
 
+        //starting transaction
+        syncCommands.multi();
+
         remainingSubscriptionIds.forEach(k -> this.cancelSubscriptionInternal(connectionId, k)); // cancel all remaining subscriptions
 
         syncCommands.del(connectionKey);
 
         // remove the connection id from the set of open connections
         syncCommands.srem(CONNECTIONS_KEY, connectionId);
+
+        //executing transaction
+        syncCommands.exec();
 
     }
 
@@ -214,12 +220,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
             throw new SubscriptionException(String.format("subscription '%s' for connection `%s` already exists in " +
                     "the cache.", subscriptionId, connectionId));
         }
-
-        // add subscription to connection hash
-        syncCommands.hset(connectionKey, subscriptionId, setToJsonString(subscription.getResources()));
-
-        // DENORMALIZED CACHE UPDATE
-
         // get connections for all resources in the new subscription
         Map<String, DenormalizedCacheValue> connectionsByResourceId =
                 this.getDenormalizedConnectionsForResourceIds(subscription.getResources());
@@ -235,11 +235,17 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                         kv -> kv.getKey(),
                         kv -> kv.getValue().getSerializedConnectionList())
                 );
+        //Starting the transaction
+        syncCommands.multi();
+
+        // add subscription to connection hash
+        syncCommands.hset(connectionKey, subscriptionId, setToJsonString(subscription.getResources()));
 
         // if there are name-spaced resources that were not initially associated with a connection, add them now.
         if (connectionsByResourceId.size() > 0) {
             syncCommands.mset(request);
         }
+        syncCommands.exec();
 
         this.logger.debug("sending request to cache: {}", request);
     }
@@ -306,6 +312,9 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
             this.logger.trace("modifiedResources: {} " + resourcesToModify);
 
+            // Beginning the transaction
+            syncCommands.multi();
+
             // delete resource cache
             if (resourcesToDelete.size() > 0) {
                 syncCommands.del(resourcesToDelete.toArray(String[]::new));
@@ -315,6 +324,8 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
             if (resourcesToModify.size() > 0) {
                 syncCommands.mset(resourcesToModify);
             }
+            //Executing the transaction
+            syncCommands.exec();
 
         }
 
