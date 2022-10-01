@@ -80,8 +80,8 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
     private RedisSubscriptionCacheService() {
 
-        String host = System.getenv(RedisSubscriptionCacheService.LDS_REDIS_HOST_ENV);
-        String port = System.getenv(RedisSubscriptionCacheService.LDS_REDIS_PORT_ENV);
+        String host = "localhost";
+        String port = "6379";
         RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
 
         this.redisClient = RedisClient.create(redisURI).connect();
@@ -167,10 +167,12 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         this.logger.debug("removing all remaining subscriptions {} ", remainingSubscriptionIds);
 
-        //starting transaction
-        syncCommands.multi();
+
 
         remainingSubscriptionIds.forEach(k -> this.cancelSubscriptionInternal(connectionId, k)); // cancel all remaining subscriptions
+
+        //starting transaction
+        syncCommands.multi();
 
         syncCommands.del(connectionKey);
 
@@ -178,7 +180,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         syncCommands.srem(CONNECTIONS_KEY, connectionId);
 
         //executing transaction
-        syncCommands.exec();
+       syncCommands.exec();
 
     }
 
