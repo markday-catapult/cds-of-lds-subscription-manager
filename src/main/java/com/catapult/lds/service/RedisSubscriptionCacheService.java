@@ -136,7 +136,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                 syncCommands.sadd(CONNECTIONS_KEY, connectionId);
                 syncCommands.hsetnx(connectionKey, CREATED_AT, "" + System.currentTimeMillis());
                 return 1;
-            });
+            },0);
         }else{
             throw new SubscriptionException(String.format("Connection '%s' already exists in the cache.",
                     connectionId));
@@ -182,7 +182,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
             // remove the connection id from the set of open connections
             syncCommands.srem(CONNECTIONS_KEY, connectionId);
             return 1;
-        });
+        },1);
 
 
     }
@@ -250,7 +250,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
             }
 
             return 1;
-        });
+        },0);
 
         this.logger.debug("sending request to cache: {}", request);
     }
@@ -328,7 +328,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                 }
 
                 return 1;
-            });
+            },0);
         }
 
         syncCommands.hdel(connectionKey, subscriptionId);
@@ -475,9 +475,10 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     /**
      * Runs the provided supplier within a redis transaction
      */
-    private Integer runTransaction(Supplier<Integer> transaction){
+    private Integer runTransaction(Supplier<Integer> transaction, int noOfRetry){
         syncCommands.multi();
-        Integer result = transaction.get();
+        RetryCommand<Integer> retryCommand = new RetryCommand<>(noOfRetry);
+        Integer result = retryCommand.run(transaction);
         syncCommands.exec();
         return result;
     }
