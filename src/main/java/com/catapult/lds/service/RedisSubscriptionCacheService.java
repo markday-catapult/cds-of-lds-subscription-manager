@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -72,6 +73,13 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     private final StatefulRedisConnection<String, String> redisClient;
 
     /**
+     * Redis commands for the connection
+     *
+     * @invariant syncCommands != null
+     */
+    private final RedisCommands<String, String> syncCommands;
+
+    /**
      * The logger used by this cache service.
      *
      * @invariant logger != null
@@ -85,6 +93,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
 
         this.redisClient = RedisClient.create(redisURI).connect();
+        this.syncCommands = redisClient.sync();
     }
 
     /**
@@ -120,15 +129,14 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         this.logger.debug("creating connection '{}' ", connectionId);
 
-        RedisCommands<String, String> syncCommands = this.redisClient.sync();
-
         String connectionKey = this.connectionIdToKey(connectionId);
 
         if( ! syncCommands.smembers(CONNECTIONS_KEY).contains(connectionId)){
-            syncCommands.multi();
-            syncCommands.sadd(CONNECTIONS_KEY,connectionId);
-            syncCommands.hsetnx(connectionKey, CREATED_AT, "" + System.currentTimeMillis());
-            syncCommands.exec();
+            runTransaction(() -> {
+                syncCommands.sadd(CONNECTIONS_KEY, connectionId);
+                syncCommands.hsetnx(connectionKey, CREATED_AT, "" + System.currentTimeMillis());
+                return 1;
+            });
         }else{
             throw new SubscriptionException(String.format("Connection '%s' already exists in the cache.",
                     connectionId));
@@ -152,8 +160,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         this.logger.debug("closing connection {} ", connectionId);
 
-        RedisCommands<String, String> syncCommands = this.redisClient.sync();
-
         String connectionKey = this.connectionIdToKey(connectionId);
         if (syncCommands.exists(connectionKey) == 0) {
             throw new SubscriptionException(String.format("Connection '%s' does not exist in the cache.",
@@ -170,16 +176,14 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         remainingSubscriptionIds.forEach(k -> this.cancelSubscriptionInternal(connectionId, k)); // cancel all remaining subscriptions
 
-        //starting transaction
-        syncCommands.multi();
+        runTransaction(()->{
 
-        syncCommands.del(connectionKey);
+            syncCommands.del(connectionKey);
+            // remove the connection id from the set of open connections
+            syncCommands.srem(CONNECTIONS_KEY, connectionId);
+            return 1;
+        });
 
-        // remove the connection id from the set of open connections
-        syncCommands.srem(CONNECTIONS_KEY, connectionId);
-
-        //executing transaction
-        syncCommands.exec();
 
     }
 
@@ -204,8 +208,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     @Override
     public void addSubscription(Subscription subscription) throws SubscriptionException {
         assert subscription != null;
-
-        RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         String connectionId = subscription.getConnectionId();
         String subscriptionId = subscription.getId();
@@ -236,17 +238,19 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                         kv -> kv.getKey(),
                         kv -> kv.getValue().getSerializedConnectionList())
                 );
-        //Starting the transaction
-        syncCommands.multi();
 
-        // add subscription to connection hash
-        syncCommands.hset(connectionKey, subscriptionId, setToJsonString(subscription.getResources()));
+        runTransaction(()->{
 
-        // if there are name-spaced resources that were not initially associated with a connection, add them now.
-        if (connectionsByResourceId.size() > 0) {
-            syncCommands.mset(request);
-        }
-        syncCommands.exec();
+            // add subscription to connection hash
+            syncCommands.hset(connectionKey, subscriptionId, setToJsonString(subscription.getResources()));
+
+            // if there are name-spaced resources that were not initially associated with a connection, add them now.
+            if (connectionsByResourceId.size() > 0) {
+                syncCommands.mset(request);
+            }
+
+            return 1;
+        });
 
         this.logger.debug("sending request to cache: {}", request);
     }
@@ -258,8 +262,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     public void cancelSubscription(String connectionId, String subscriptionId) throws SubscriptionException {
         assert connectionId != null;
         assert subscriptionId != null;
-
-        RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         String connectionKey = this.connectionIdToKey(connectionId);
 
@@ -313,21 +315,20 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
             this.logger.trace("modifiedResources: {} " + resourcesToModify);
 
-            // Beginning the transaction
-            syncCommands.multi();
+            runTransaction(()->{
 
-            // delete resource cache
-            if (resourcesToDelete.size() > 0) {
-                syncCommands.del(resourcesToDelete.toArray(String[]::new));
-            }
+                // delete resource cache
+                if (resourcesToDelete.size() > 0) {
+                    syncCommands.del(resourcesToDelete.toArray(String[]::new));
+                }
 
-            // modify resource cache entries
-            if (resourcesToModify.size() > 0) {
-                syncCommands.mset(resourcesToModify);
-            }
-            //Executing the transaction
-            syncCommands.exec();
+                // modify resource cache entries
+                if (resourcesToModify.size() > 0) {
+                    syncCommands.mset(resourcesToModify);
+                }
 
+                return 1;
+            });
         }
 
         syncCommands.hdel(connectionKey, subscriptionId);
@@ -339,8 +340,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     @Override
     public Collection<Subscription> getSubscriptions(String connectionId) throws SubscriptionException {
         assert connectionId != null;
-
-        RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         String connectionKey = this.connectionIdToKey(connectionId);
 
@@ -363,8 +362,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     public Subscription getSubscription(String connectionId, String subscriptionId) {
         assert connectionId != null;
         assert subscriptionId != null;
-
-        RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         String connectionKey = this.connectionIdToKey(connectionId);
         String resourceJson = syncCommands.hget(connectionKey, subscriptionId);
@@ -473,5 +470,12 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         assert connectionId != null;
 
         return CONNECTION_NAMESPACE + connectionId;
+    }
+
+    private Integer runTransaction(Supplier<Integer> transaction){
+        syncCommands.multi();
+        Integer result = transaction.get();
+        syncCommands.exec();
+        return result;
     }
 }
