@@ -472,6 +472,9 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         return CONNECTION_NAMESPACE + connectionId;
     }
 
+    /**
+     * Runs the provided supplier within a redis transaction
+     */
     private Integer runTransaction(Supplier<Integer> transaction){
         syncCommands.multi();
         Integer result = transaction.get();
