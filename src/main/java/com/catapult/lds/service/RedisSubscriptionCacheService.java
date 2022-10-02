@@ -80,8 +80,8 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
     private RedisSubscriptionCacheService() {
 
-        String host = "localhost";
-        String port = "6379";
+        String host = System.getenv(RedisSubscriptionCacheService.LDS_REDIS_HOST_ENV);
+        String port = System.getenv(RedisSubscriptionCacheService.LDS_REDIS_PORT_ENV);
         RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
 
         this.redisClient = RedisClient.create(redisURI).connect();
@@ -159,7 +159,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
             throw new SubscriptionException(String.format("Connection '%s' does not exist in the cache.",
                     connectionId));
         }
-
         Set<String> remainingSubscriptionIds = syncCommands.hkeys(connectionKey)
                 .stream()
                 .filter(k -> !CREATED_AT.equals(k))
@@ -180,7 +179,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         syncCommands.srem(CONNECTIONS_KEY, connectionId);
 
         //executing transaction
-       syncCommands.exec();
+        syncCommands.exec();
 
     }
 
