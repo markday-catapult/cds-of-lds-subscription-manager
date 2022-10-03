@@ -28,7 +28,7 @@ public class JWTAuthorizationService implements AuthorizationService{
         
         DecodedJWT jwt = JWT.decode(token);
 
-        //TODO: Extract the url from jwt
+        //TODO: Extract the url from jwt and cache the jwks
         // JWKProvider appends the well know path to the host "https://backend-au.openfield.catapultsports.com/.well-known/jwks.json"
         JwkProvider provider = new UrlJwkProvider("https://backend-au.openfield.catapultsports.com");
 
@@ -44,7 +44,7 @@ public class JWTAuthorizationService implements AuthorizationService{
         try {
             algorithm = Algorithm.RSA256((RSAPublicKey) jwk.getPublicKey(), null);
         } catch (InvalidPublicKeyException e) {
-            throw new SubscriptionException("Error getting Public key from JWKS: "+e.getMessage());
+            throw new SubscriptionException("Error getting Public key from JWK: "+e.getMessage());
         }
         //Verifying the token
         try {
