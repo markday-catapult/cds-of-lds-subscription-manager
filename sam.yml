@@ -128,7 +128,6 @@ Resources:
       ApiId:
         Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       ApiKeyRequired: No
-      AuthorizerId: !Ref ApiGatewayConnectAuthorizer
       OperationName: Connect
       RouteKey: $connect
       Target: !Join
@@ -137,7 +136,6 @@ Resources:
           - !Ref ApiGatewayConnectIntegration
     DependsOn:
       - ApiGatewayConnectIntegration
-      - ApiGatewayConnectAuthorizer
   ApiGatewayConnectRouteResponse:
     Type: AWS::ApiGatewayV2::RouteResponse
     Properties:
