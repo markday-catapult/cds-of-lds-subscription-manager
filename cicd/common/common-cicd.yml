@@ -29,24 +29,25 @@ cache:
   - |
     if [[ $SHOW_ENVIRONMENT_INFO == "true" ]]
     then
-      echo "APPLICATION_NAME:         $APPLICATION_NAME"
-      echo "CATAPULT_WORKFLOW_ACTION: $CATAPULT_WORKFLOW_ACTION"
-      echo "CI_COMMIT_REF_PROTECTED:  $CI_COMMIT_REF_PROTECTED"
-      echo "CI_PIPELINE_SOURCE:       $CI_PIPELINE_SOURCE"
-      echo "CI_COMMIT_BRANCH:         $CI_COMMIT_BRANCH"
-      echo "CI_COMMIT_TITLE:          $CI_COMMIT_TITLE"
-      echo "CI_COMMIT_SHA:            $CI_COMMIT_SHA"
-      echo "CI_PIPELINE_ID:           $CI_PIPELINE_ID"
-      echo "CI_DEFAULT_BRANCH:        $CI_DEFAULT_BRANCH"
-      echo "ENV_DEPLOY_NAMESPACE:     $ENV_DEPLOY_NAMESPACE"
-      echo "ENV_DEPLOY_ENVIRONMENT:   $ENV_DEPLOY_ENVIRONMENT"
-      echo "ENV_DEPLOY_SCOPE:         $ENV_DEPLOY_SCOPE"
-      echo "ENV_DEPLOY_REGION:        $ENV_DEPLOY_REGION"
-      echo "ENV_STACK_NAME:           $ENV_STACK_NAME"
-      echo "ENV_STACK_VPC:            $ENV_STACK_VPC"
-      echo "ENV_STACK_REDIS:          $ENV_STACK_REDIS"
-      echo "ENV_STACK_KINESIS:        $ENV_STACK_KINESIS"
-      echo "ENV_STACK_API_GATEWAY:    $ENV_STACK_API_GATEWAY"
+      echo "APPLICATION_NAME:                       $APPLICATION_NAME"
+      echo "CATAPULT_WORKFLOW_ACTION:               $CATAPULT_WORKFLOW_ACTION"
+      echo "CI_COMMIT_REF_PROTECTED:                $CI_COMMIT_REF_PROTECTED"
+      echo "CI_PIPELINE_SOURCE:                     $CI_PIPELINE_SOURCE"
+      echo "CI_COMMIT_BRANCH:                       $CI_COMMIT_BRANCH"
+      echo "CI_COMMIT_TITLE:                        $CI_COMMIT_TITLE"
+      echo "CI_COMMIT_SHA:                          $CI_COMMIT_SHA"
+      echo "CI_PIPELINE_ID:                         $CI_PIPELINE_ID"
+      echo "CI_DEFAULT_BRANCH:                      $CI_DEFAULT_BRANCH"
+      echo "ENV_DEPLOY_NAMESPACE:                   $ENV_DEPLOY_NAMESPACE"
+      echo "ENV_DEPLOY_ENVIRONMENT:                 $ENV_DEPLOY_ENVIRONMENT"
+      echo "ENV_DEPLOY_SCOPE:                       $ENV_DEPLOY_SCOPE"
+      echo "ENV_DEPLOY_REGION:                      $ENV_DEPLOY_REGION"
+      echo "ENV_STACK_NAME:                         $ENV_STACK_NAME"
+      echo "ENV_STACK_VPC:                          $ENV_STACK_VPC"
+      echo "ENV_STACK_REDIS:                        $ENV_STACK_REDIS"
+      echo "ENV_STACK_KINESIS:                      $ENV_STACK_KINESIS"
+      echo "ENV_STACK_API_GATEWAY:                  $ENV_STACK_API_GATEWAY"
+      echo "ENV_STACK_API_GATEWAY_AUTHORIZER:       $ENV_STACK_API_GATEWAY_AUTHORIZER"
     fi
 
 
@@ -108,6 +109,7 @@ workflow:
     ENV_STACK_REDIS: "${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${ENV_DEPLOY_SCOPE}-elasticache-redis"
     ENV_STACK_KINESIS: "${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${ENV_DEPLOY_SCOPE}-kinesis"
     ENV_STACK_API_GATEWAY: "${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${ENV_DEPLOY_SCOPE}-api-gateway"
+    ENV_STACK_API_GATEWAY_AUTHORIZER: "${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${ENV_DEPLOY_SCOPE}-of-authorizer"
     ENV_STACK_NAME: "${ENV_DEPLOY_NAMESPACE}-${ENV_DEPLOY_ENVIRONMENT}-${APPLICATION_NAME}"
   stage: deploy
   before_script:
@@ -133,6 +135,8 @@ workflow:
       RedisStack=${ENV_STACK_REDIS}
       KinesisStack=${ENV_STACK_KINESIS}
       ApiGatewayStack=${ENV_STACK_API_GATEWAY}
+      ApiGatewayAuthorizerStack=${ENV_STACK_API_GATEWAY_AUTHORIZER}
+
 
 
 ######### EXECUTABLE JOBS
