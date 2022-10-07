@@ -73,58 +73,6 @@ Conditions:
   UseStackNamespace: !Or [ !Equals [ !Ref StackEnv, "dev" ], !Equals [ !Ref StackEnv, "test" ] ]
 
 Resources:
-  # Connect Authorization Function
-  WebsocketConnectAuthorizeFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Architectures:
-        - x86_64
-      AutoPublishAlias: !Ref VersionId
-      Description: The WebsocketConnectAuthorizeFunction handles the authorization for the '$connect' route.
-      FunctionName: !If
-        - UseStackNamespace
-        - !Sub '${StackNamespace}-${StackEnv}-of-lds-websocket-connect-authorize'
-        - !Sub '${StackEnv}-of-lds-websocket-connect-authorize'
-      Handler: com.catapult.lds.ConnectAuthorizationHandler::handleRequest
-      PackageType: Zip
-      Runtime: java11
-      MemorySize: 1024
-      ProvisionedConcurrencyConfig:
-        ProvisionedConcurrentExecutions: 2
-      Timeout: 10
-      Tracing: Active
-      VpcConfig:
-        SecurityGroupIds:
-          - Fn::ImportValue: !Sub '${VpcStack}:client-security-group'
-        SubnetIds: !Split
-          - ','
-          - Fn::ImportValue: !Sub '${VpcStack}:private-subnets'
-      Environment:
-        Variables:
-          EXECUTE_ARN: !Join
-            - ''
-            - - !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:'
-              - Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
-              - '/'
-              - Fn::ImportValue: !Sub '${ApiGatewayStack}:stage-name'
-              - '/'
-              - '$connect'
-  WebsocketConnectAuthorizatFunctionApiGatewayPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: "lambda:InvokeFunction"
-      FunctionName: !Ref WebsocketConnectAuthorizeFunction
-      Principal: apigateway.amazonaws.com
-  ApiGatewayConnectAuthorizer:
-    Type: 'AWS::ApiGatewayV2::Authorizer'
-    Properties:
-      Name: ConnectAuthorizer
-      ApiId:
-        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
-      AuthorizerType: REQUEST
-      AuthorizerUri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${WebsocketConnectAuthorizeFunction}/invocations'
-      IdentitySource:
-        - route.request.header.Authorization
   # Websocket Connect Function
   WebsocketConnectFunction:
     Type: AWS::Serverless::Function
@@ -180,7 +128,6 @@ Resources:
       ApiId:
         Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       ApiKeyRequired: No
-      AuthorizerId: !Ref ApiGatewayConnectAuthorizer
       OperationName: Connect
       RouteKey: $connect
       Target: !Join
@@ -189,7 +136,6 @@ Resources:
           - !Ref ApiGatewayConnectIntegration
     DependsOn:
       - ApiGatewayConnectIntegration
-      - ApiGatewayConnectAuthorizer
   ApiGatewayConnectRouteResponse:
     Type: AWS::ApiGatewayV2::RouteResponse
     Properties:
