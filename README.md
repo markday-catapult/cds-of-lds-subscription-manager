@@ -142,5 +142,6 @@ $ sam deploy \
        StackEnv=${STACK_ENV}                            \
        VpcStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-vpc       \
        ApiGatewayStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-api-gateway       \
+       ApiGatewayAuthorizerStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-authorizer       \
        RedisStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-elasticache-redis             
 ```

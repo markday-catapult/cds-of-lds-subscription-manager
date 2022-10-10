@@ -13,6 +13,7 @@
 #       ApiGatewayStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-api-gateway \
 #       KinesisStack={STACK_NAMESPACE}-${STACK_ENV}-lds-kinesis \
 #       RedisStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-elasticache-redis \
+#       ApiGatewayAuthorizerStack=${STACK_NAMESPACE}-${STACK_ENV}-lds-authorizer \
 #       VersionId=`git rev-parse --short HEAD`
 
 
@@ -26,16 +27,18 @@ Globals:
   Function:
     Environment:
       Variables:
-        JAVA_TOOL_OPTIONS: -javaagent:"/opt/java/lib/dd-java-agent.jar" -XX:+TieredCompilation -XX:TieredStopAtLevel=1
-        DD_JMXFETCH_ENABLED: false
-        DD_TRACE_ENABLED: false
+        JAVA_TOOL_OPTIONS: -XX:+TieredCompilation -XX:TieredStopAtLevel=1
         DD_SITE: datadoghq.com
         DD_API_KEY: "{{resolve:secretsmanager:datadog-api-key}}"
         DD_ENV: !Sub '${StackEnv}'
+        DD_SERVICE: !If
+          - UseStackNamespace
+          - !Sub '${StackNamespace}-${StackEnv}-of-lds-subscription-manager'
+          - !Sub '${StackEnv}-of-lds-subscription-manager'
         AWS_LAMBDA_EXEC_WRAPPER: /opt/datadog_wrapper
     Layers:
-      - !Sub 'arn:aws:lambda:${AWS::Region}:464622532012:layer:Datadog-Extension:25'
-      - !Sub 'arn:aws:lambda:${AWS::Region}:464622532012:layer:dd-trace-java:4'
+      - !Sub 'arn:aws:lambda:${AWS::Region}:464622532012:layer:Datadog-Extension:29'
+      - !Sub 'arn:aws:lambda:${AWS::Region}:464622532012:layer:dd-trace-java:6'
 
 Parameters:
   StackNamespace:
@@ -67,6 +70,9 @@ Parameters:
     Type: String
   RedisStack:
     Description: 'The name of the redis cluster stack.'
+    Type: String
+  ApiGatewayAuthorizerStack:
+    Description: 'The name of the api gateway authorizer  stack.'
     Type: String
 
 Conditions:
@@ -128,6 +134,9 @@ Resources:
       ApiId:
         Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
       ApiKeyRequired: No
+      AuthorizationType: CUSTOM
+      AuthorizerId:
+        Fn::ImportValue: !Sub  '${ApiGatewayAuthorizerStack}:websocket-connect-authorizer-id'
       OperationName: Connect
       RouteKey: $connect
       Target: !Join
