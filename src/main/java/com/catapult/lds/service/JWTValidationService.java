@@ -34,8 +34,8 @@ public class JWTValidationService implements AuthorizationService {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Validates userId and  LDS claim available in JWT token and throws an exception if validation fails.
-     *
+     * {@inheritDoc}
+     * 
      * @pre userId != null
      * @pre requestContext != null
      * @throws SubscriptionException
