@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.util.List;
+
 /**
  * {@code AuthContext} is a representation of JWT claims available in lambda request context.
  */
@@ -14,10 +15,11 @@ public class AuthContext {
     private Auth auth;
 
     public String getSubject(){
-        return this.auth.claims.getSub();
+        return auth != null && auth.claims != null && auth.claims.sub != null ? auth.claims.getSub() : null;
     }
     public boolean containsScope(String scopeName){
-        return this.auth.claims.getScopes().contains(scopeName);
+        return auth != null && auth.claims != null && auth.claims.scopes!=null?
+                auth.claims.getScopes().stream().filter(s->s.equalsIgnoreCase(scopeName)).findFirst().isPresent():false;
     }
 
     @Data
