@@ -30,7 +30,7 @@
         },
         "scopes": [
           "com.catapultsports.services.IoT",
-          "com.catapultsports.services.LDS",
+          "com.catapultsports.services.lds",
           "activities-update",
           "annotations-update",
           "athletes-update",

@@ -45,7 +45,7 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
             AuthContext authContext = objectMapper.convertValue(requestContext.get(CONTEXT_CATAPULT_SPORTS), AuthContext.class);
 
             //validating userId
-            if (!authContext.getSubject().equalsIgnoreCase(userId)) {
+            if (authContext.getSubject() == null || !authContext.getSubject().equalsIgnoreCase(userId)) {
                 throw new SubscriptionException("Unauthorized user");
             }
 
