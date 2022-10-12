@@ -1,0 +1,92 @@
+{
+  "resource": null,
+  "path": null,
+  "httpMethod": null,
+  "headers": {
+    "Host": "1pelsoofc2.execute-api.ap-southeast-2.amazonaws.com",
+    "Sec-WebSocket-Extensions": "permessage-deflate; client_max_window_bits",
+    "Sec-WebSocket-Key": "HXf0Plq+O3kF+nvvx0fZEA==",
+    "Sec-WebSocket-Protocol": "Bearer eyJhbGciOiJSUzI1NiJ9.eyJleHAiOjE2NjU1MTM2MzYsImlhdCI6MTY2NTQ5NTYzNiwibmJmIjoxNjY1NDk1NjM2LCJqdGkiOiJmMDJmMjk5OGI3YmQ1NmIyMDk4ZDUzYzg5NjM2YzRjNTlmZmJlOTQxNTJiMmFhZjM5ZTUyNGJiZWM5YWM0MGMwY2IyZDZmNzcxNmU5MTdiYyIsImF1ZCI6IkROS2Y4a0xIV1FUalB6QzJTcGV1RUFSNXdHSnZ5N202dDlZcVhVNE0iLCJpc3MiOiJodHRwczovL2JhY2tlbmQtYXUub3BlbmZpZWxkLmNhdGFwdWx0c3BvcnRzLmNvbSIsInN1YiI6ImVlODc1OGVjLWZlNWYtNDU3NC04YjcxLWJhMjRmMzBlZTY3MiIsImNvbS5jYXRhcHVsdHNwb3J0cyI6eyJvcGVuZmllbGQiOnsiY3VzdG9tZXJzIjpbeyJyZWxhdGlvbiI6ImF1dGgiLCJpZCI6MjcxNn0seyJyZWxhdGlvbiI6InBhcmVudCIsImlkIjoyNDA2fSx7InJlbGF0aW9uIjoicGFyZW50IiwiaWQiOjI4NDh9XX19LCJzY29wZXMiOlsiY29tLmNhdGFwdWx0c3BvcnRzLnNlcnZpY2VzLklvVCIsImNvbS5jYXRhcHVsdHNwb3J0cy5zZXJ2aWNlcy5MRFMiLCJhY3Rpdml0aWVzLXVwZGF0ZSIsImFubm90YXRpb25zLXVwZGF0ZSIsImF0aGxldGVzLXVwZGF0ZSIsImJpbmFyeXN0cmVhbS1yZWFkLW9ubHkiLCJiaW5hcnlzdHJlYW0tdXBkYXRlIiwiY2F0YXB1bHRyIiwiY29ubmVjdCIsImN1c3RvbWVyLXJlYWQtb25seSIsImZpbGVzLXJlYWQtb25seSIsImZpbGVzLXVwZGF0ZSIsImxvZ3MtdXBsb2FkIiwibW9kdWxlcy1yZWFkLW9ubHkiLCJzY2hlbWEtcmVhZC1vbmx5Iiwic2NoZW1hLXVwZGF0ZSIsInNlbnNvci1yZWFkLW9ubHkiLCJzeW5jLXJlYWQtb25seSIsInN5bmMtdXBkYXRlIiwidGFncy11cGRhdGUiLCJ1c2VyLXJlYWQtb25seSIsInVzZXItdXBkYXRlIiwidmVyc2lvbi1yZWFkLW9ubHkiLCJtaWNyb2F1dGgiXX0.aFwrNvbHyDMO_NR-jb8vVrPcVMUw4zxvXSgiWmHwUg12YmWHcslsavj2Oq56EjXez_NBtdaHNEj_5CNu7VeEhpqMMmIPakcX_zvGh2M7xoCybymdtIeSngcwVMivfUfjhqk_ya5jwYmO5AL7AYDNmRlSi9Ba71r3gvo8Fn1pMX24v-GtKn1Ou8UNBCnERWaZWY0eam5eOU7zWdosFefgqcxvnEnNuk92m9wglHOKvUGliNMPzQEkyPdJZbbct2gT4ojQ9i-yuBU1Yg6zMQZudjpbnU9k6YFDWksh1IZKYQcu5-1qbCUYabDRTRTKXZRT090Z8-W7_RELxPK_hVIoTp_-U6eLJqs_LZidtbQ-Q5UH6twviuzc3B2Ze4P0GJbGlKp0GVceC5UnK5p5bL2Id1BrEU2v78gu-8oZ-ReTkpfMSfBJLzEE71vXLbNfJTzUNd4dhhvaTuB5v66mzGocbLRN3g0-XAtXhdz2YBwV-XmMe-tLHifdQM2q5xkeAoYZncYiy2J-X2ixgryb4dXPy35CFP2s8DTsBtlSm8ctY4MqqktPXuiNP_xKq_2sfzZekelwXhjLQMBR4RX2VHPz7f3qXJrj-rzvEHk4qBOuiog4jqg-0qdtYyQmZZyep6TXGcaTWCqtOYcAc2qKdqZKxHg0SuluTahEDvPAy9p3A00",
+    "Sec-WebSocket-Version": "13",
+    "X-Amzn-Trace-Id": "Root=1-6346f3c5-132c14777a5df3cb34c8eabd",
+    "X-Forwarded-For": "173.76.199.164",
+    "X-Forwarded-Port": "443",
+    "X-Forwarded-Proto": "https"
+  },
+  "multiValueHeaders": {
+    "Host": [
+      "1pelsoofc2.execute-api.ap-southeast-2.amazonaws.com"
+    ],
+    "Sec-WebSocket-Extensions": [
+      "permessage-deflate; client_max_window_bits"
+    ],
+    "Sec-WebSocket-Key": [
+      "HXf0Plq+O3kF+nvvx0fZEA=="
+    ],
+    "Sec-WebSocket-Protocol": [
+      "Bearer eyJhbGciOiJSUzI1NiJ9.eyJleHAiOjE2NjU1MTM2MzYsImlhdCI6MTY2NTQ5NTYzNiwibmJmIjoxNjY1NDk1NjM2LCJqdGkiOiJmMDJmMjk5OGI3YmQ1NmIyMDk4ZDUzYzg5NjM2YzRjNTlmZmJlOTQxNTJiMmFhZjM5ZTUyNGJiZWM5YWM0MGMwY2IyZDZmNzcxNmU5MTdiYyIsImF1ZCI6IkROS2Y4a0xIV1FUalB6QzJTcGV1RUFSNXdHSnZ5N202dDlZcVhVNE0iLCJpc3MiOiJodHRwczovL2JhY2tlbmQtYXUub3BlbmZpZWxkLmNhdGFwdWx0c3BvcnRzLmNvbSIsInN1YiI6ImVlODc1OGVjLWZlNWYtNDU3NC04YjcxLWJhMjRmMzBlZTY3MiIsImNvbS5jYXRhcHVsdHNwb3J0cyI6eyJvcGVuZmllbGQiOnsiY3VzdG9tZXJzIjpbeyJyZWxhdGlvbiI6ImF1dGgiLCJpZCI6MjcxNn0seyJyZWxhdGlvbiI6InBhcmVudCIsImlkIjoyNDA2fSx7InJlbGF0aW9uIjoicGFyZW50IiwiaWQiOjI4NDh9XX19LCJzY29wZXMiOlsiY29tLmNhdGFwdWx0c3BvcnRzLnNlcnZpY2VzLklvVCIsImNvbS5jYXRhcHVsdHNwb3J0cy5zZXJ2aWNlcy5MRFMiLCJhY3Rpdml0aWVzLXVwZGF0ZSIsImFubm90YXRpb25zLXVwZGF0ZSIsImF0aGxldGVzLXVwZGF0ZSIsImJpbmFyeXN0cmVhbS1yZWFkLW9ubHkiLCJiaW5hcnlzdHJlYW0tdXBkYXRlIiwiY2F0YXB1bHRyIiwiY29ubmVjdCIsImN1c3RvbWVyLXJlYWQtb25seSIsImZpbGVzLXJlYWQtb25seSIsImZpbGVzLXVwZGF0ZSIsImxvZ3MtdXBsb2FkIiwibW9kdWxlcy1yZWFkLW9ubHkiLCJzY2hlbWEtcmVhZC1vbmx5Iiwic2NoZW1hLXVwZGF0ZSIsInNlbnNvci1yZWFkLW9ubHkiLCJzeW5jLXJlYWQtb25seSIsInN5bmMtdXBkYXRlIiwidGFncy11cGRhdGUiLCJ1c2VyLXJlYWQtb25seSIsInVzZXItdXBkYXRlIiwidmVyc2lvbi1yZWFkLW9ubHkiLCJtaWNyb2F1dGgiXX0.aFwrNvbHyDMO_NR-jb8vVrPcVMUw4zxvXSgiWmHwUg12YmWHcslsavj2Oq56EjXez_NBtdaHNEj_5CNu7VeEhpqMMmIPakcX_zvGh2M7xoCybymdtIeSngcwVMivfUfjhqk_ya5jwYmO5AL7AYDNmRlSi9Ba71r3gvo8Fn1pMX24v-GtKn1Ou8UNBCnERWaZWY0eam5eOU7zWdosFefgqcxvnEnNuk92m9wglHOKvUGliNMPzQEkyPdJZbbct2gT4ojQ9i-yuBU1Yg6zMQZudjpbnU9k6YFDWksh1IZKYQcu5-1qbCUYabDRTRTKXZRT090Z8-W7_RELxPK_hVIoTp_-U6eLJqs_LZidtbQ-Q5UH6twviuzc3B2Ze4P0GJbGlKp0GVceC5UnK5p5bL2Id1BrEU2v78gu-8oZ-ReTkpfMSfBJLzEE71vXLbNfJTzUNd4dhhvaTuB5v66mzGocbLRN3g0-XAtXhdz2YBwV-XmMe-tLHifdQM2q5xkeAoYZncYiy2J-X2ixgryb4dXPy35CFP2s8DTsBtlSm8ctY4MqqktPXuiNP_xKq_2sfzZekelwXhjLQMBR4RX2VHPz7f3qXJrj-rzvEHk4qBOuiog4jqg-0qdtYyQmZZyep6TXGcaTWCqtOYcAc2qKdqZKxHg0SuluTahEDvPAy9p3A00"
+    ],
+    "Sec-WebSocket-Version": [
+      "13"
+    ],
+    "X-Amzn-Trace-Id": [
+      "Root=1-6346f3c5-132c14777a5df3cb34c8eabd"
+    ],
+    "X-Forwarded-For": [
+      "173.76.199.164"
+    ],
+    "X-Forwarded-Port": [
+      "443"
+    ],
+    "X-Forwarded-Proto": [
+      "https"
+    ]
+  },
+  "queryStringParameters": null,
+  "multiValueQueryStringParameters": null,
+  "pathParameters": null,
+  "stageVariables": null,
+  "requestContext": {
+    "accountId": null,
+    "resourceId": null,
+    "stage": "lds",
+    "requestId": "Z5sG0FehywMF_OQ=",
+    "identity": {
+      "cognitoIdentityPoolId": null,
+      "accountId": null,
+      "cognitoIdentityId": null,
+      "caller": null,
+      "apiKey": null,
+      "sourceIp": "173.76.199.164",
+      "cognitoAuthenticationType": null,
+      "cognitoAuthenticationProvider": null,
+      "userArn": null,
+      "userAgent": null,
+      "user": null,
+      "accessKey": null
+    },
+    "authorizer": {
+      "catapultsports": "{\"auth\":{\"token\":\"eyJhbGciOiJSUzI1NiJ9.eyJleHAiOjE2NjU1MTM2MzYsImlhdCI6MTY2NTQ5NTYzNiwibmJmIjoxNjY1NDk1NjM2LCJqdGkiOiJmMDJmMjk5OGI3YmQ1NmIyMDk4ZDUzYzg5NjM2YzRjNTlmZmJlOTQxNTJiMmFhZjM5ZTUyNGJiZWM5YWM0MGMwY2IyZDZmNzcxNmU5MTdiYyIsImF1ZCI6IkROS2Y4a0xIV1FUalB6QzJTcGV1RUFSNXdHSnZ5N202dDlZcVhVNE0iLCJpc3MiOiJodHRwczovL2JhY2tlbmQtYXUub3BlbmZpZWxkLmNhdGFwdWx0c3BvcnRzLmNvbSIsInN1YiI6ImVlODc1OGVjLWZlNWYtNDU3NC04YjcxLWJhMjRmMzBlZTY3MiIsImNvbS5jYXRhcHVsdHNwb3J0cyI6eyJvcGVuZmllbGQiOnsiY3VzdG9tZXJzIjpbeyJyZWxhdGlvbiI6ImF1dGgiLCJpZCI6MjcxNn0seyJyZWxhdGlvbiI6InBhcmVudCIsImlkIjoyNDA2fSx7InJlbGF0aW9uIjoicGFyZW50IiwiaWQiOjI4NDh9XX19LCJzY29wZXMiOlsiY29tLmNhdGFwdWx0c3BvcnRzLnNlcnZpY2VzLklvVCIsImNvbS5jYXRhcHVsdHNwb3J0cy5zZXJ2aWNlcy5MRFMiLCJhY3Rpdml0aWVzLXVwZGF0ZSIsImFubm90YXRpb25zLXVwZGF0ZSIsImF0aGxldGVzLXVwZGF0ZSIsImJpbmFyeXN0cmVhbS1yZWFkLW9ubHkiLCJiaW5hcnlzdHJlYW0tdXBkYXRlIiwiY2F0YXB1bHRyIiwiY29ubmVjdCIsImN1c3RvbWVyLXJlYWQtb25seSIsImZpbGVzLXJlYWQtb25seSIsImZpbGVzLXVwZGF0ZSIsImxvZ3MtdXBsb2FkIiwibW9kdWxlcy1yZWFkLW9ubHkiLCJzY2hlbWEtcmVhZC1vbmx5Iiwic2NoZW1hLXVwZGF0ZSIsInNlbnNvci1yZWFkLW9ubHkiLCJzeW5jLXJlYWQtb25seSIsInN5bmMtdXBkYXRlIiwidGFncy11cGRhdGUiLCJ1c2VyLXJlYWQtb25seSIsInVzZXItdXBkYXRlIiwidmVyc2lvbi1yZWFkLW9ubHkiLCJtaWNyb2F1dGgiXX0.aFwrNvbHyDMO_NR-jb8vVrPcVMUw4zxvXSgiWmHwUg12YmWHcslsavj2Oq56EjXez_NBtdaHNEj_5CNu7VeEhpqMMmIPakcX_zvGh2M7xoCybymdtIeSngcwVMivfUfjhqk_ya5jwYmO5AL7AYDNmRlSi9Ba71r3gvo8Fn1pMX24v-GtKn1Ou8UNBCnERWaZWY0eam5eOU7zWdosFefgqcxvnEnNuk92m9wglHOKvUGliNMPzQEkyPdJZbbct2gT4ojQ9i-yuBU1Yg6zMQZudjpbnU9k6YFDWksh1IZKYQcu5-1qbCUYabDRTRTKXZRT090Z8-W7_RELxPK_hVIoTp_-U6eLJqs_LZidtbQ-Q5UH6twviuzc3B2Ze4P0GJbGlKp0GVceC5UnK5p5bL2Id1BrEU2v78gu-8oZ-ReTkpfMSfBJLzEE71vXLbNfJTzUNd4dhhvaTuB5v66mzGocbLRN3g0-XAtXhdz2YBwV-XmMe-tLHifdQM2q5xkeAoYZncYiy2J-X2ixgryb4dXPy35CFP2s8DTsBtlSm8ctY4MqqktPXuiNP_xKq_2sfzZekelwXhjLQMBR4RX2VHPz7f3qXJrj-rzvEHk4qBOuiog4jqg-0qdtYyQmZZyep6TXGcaTWCqtOYcAc2qKdqZKxHg0SuluTahEDvPAy9p3A00\",\"claims\":{\"exp\":1665513636,\"iat\":1665495636,\"nbf\":1665495636,\"jti\":\"f02f2998b7bd56b2098d53c89636c4c59ffbe94152b2aaf39e524bbec9ac40c0cb2d6f7716e917bc\",\"aud\":\"DNKf8kLHWQTjPzC2SpeuEAR5wGJvy7m6t9YqXU4M\",\"iss\":\"https://backend-au.openfield.catapultsports.com\",\"sub\":\"ee8758ec-fe5f-4574-8b71-ba24f30ee672\",\"com.catapultsports\":{\"openfield\":{\"customers\":[{\"relation\":\"auth\",\"id\":2716},{\"relation\":\"parent\",\"id\":2406},{\"relation\":\"parent\",\"id\":2848}]}},\"scopes\":[\"com.catapultsports.services.IoT\",\"com.catapultsports.services.LDS\",\"activities-update\",\"annotations-update\",\"athletes-update\",\"binarystream-read-only\",\"binarystream-update\",\"catapultr\",\"connect\",\"customer-read-only\",\"files-read-only\",\"files-update\",\"logs-upload\",\"modules-read-only\",\"schema-read-only\",\"schema-update\",\"sensor-read-only\",\"sync-read-only\",\"sync-update\",\"tags-update\",\"user-read-only\",\"user-update\",\"version-read-only\",\"microauth\"]}}}",
+      "principalId": "sub:ee8758ec-fe5f-4574-8b71-ba24f30ee672",
+      "integrationLatency": 1217
+    },
+    "httpMethod": null,
+    "apiId": "1pelsoofc2",
+    "connectedAt": 1665594309060,
+    "connectionId": "Z5sG0cfgSwMCIbA=",
+    "domainName": "1pelsoofc2.execute-api.ap-southeast-2.amazonaws.com",
+    "error": null,
+    "eventType": "CONNECT",
+    "extendedRequestId": "Z5sG0FehywMF_OQ=",
+    "integrationLatency": null,
+    "messageDirection": "IN",
+    "messageId": null,
+    "requestTime": "12/Oct/2022:17:05:09 +0000",
+    "requestTimeEpoch": 1665594309061,
+    "routeKey": "$connect",
+    "status": null,
+    "resourcePath": null
+  },
+  "body": null,
+  "isBase64Encoded": false
+}

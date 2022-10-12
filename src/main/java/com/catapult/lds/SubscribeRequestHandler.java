@@ -4,10 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
-import com.catapult.lds.service.ResourceNameSpace;
-import com.catapult.lds.service.Subscription;
-import com.catapult.lds.service.SubscriptionCacheService;
-import com.catapult.lds.service.SubscriptionException;
+import com.catapult.lds.service.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,6 +42,13 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
      * @invariant subscriptionCacheService != null
      */
     private static final SubscriptionCacheService subscriptionCacheService = Util.cacheService;
+
+    /**
+     * Service used to validate the claims available in the request context
+     *
+     * @invariant claimsValidationService != null
+     */
+    private static final ClaimsValidationService claimsValidationService = new JWTClaimsValidationService();
 
     /**
      * The object mapper used by this handler.
@@ -113,7 +117,8 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
 
             Subscription subscription = new Subscription(connectionId, resources);
 
-            // TODO: Authorize the subscription
+            // JWT claims validation
+            claimsValidationService.validateClaims(subscriptionRequest.getUserId(),event.getRequestContext().getAuthorizer());
 
             // Add the subscription
             subscriptionCacheService.addSubscription(subscription);
@@ -127,6 +132,12 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
             // notify the client of any error
             return Util.createSubscriptionErrorResponse(
                     HttpURLConnection.HTTP_INTERNAL_ERROR,
+                    subscriptionRequest.requestId,
+                    e.getMessage());
+        } catch (UnauthorizedUserException e) {
+            // notify the client of any error
+            return Util.createSubscriptionErrorResponse(
+                    HttpURLConnection.HTTP_UNAUTHORIZED,
                     subscriptionRequest.requestId,
                     e.getMessage());
         }
@@ -143,6 +154,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
         private String action;
         private String dataClass;
         private String requestId;
+        private String userId;
         private SubscriptionRequestResources resources;
 
         /**
