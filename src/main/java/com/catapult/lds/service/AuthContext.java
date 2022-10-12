@@ -1,16 +1,21 @@
 package com.catapult.lds.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Builder;
 import lombok.Data;
+import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * {@code AuthContext} is a representation of JWT claims available in lambda request context.
  */
-@Data
+@Builder
+@Jacksonized
+@Value
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class AuthContext {
+public final class AuthContext {
 
     private Auth auth;
 
@@ -24,16 +29,16 @@ public class AuthContext {
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class Auth {
+    public static final class Auth {
         private Claims claims;
 
     }
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class Claims {
+    public static final class Claims {
         private String sub;
-        private List<String> scopes;
+        private Set<String> scopes;
     }
 
 }
