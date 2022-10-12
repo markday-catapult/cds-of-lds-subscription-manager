@@ -43,7 +43,7 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
         assert (userId !=null);
         assert (requestContext != null);
 
-        //TODO need to throw UnauthorizedUserException when requestContext doesnot exist.
+        //TODO need to throw SubscriptionException when requestContext doesnot exist.
         if (requestContext.get(CONTEXT_CATAPULT_SPORTS) != null) {
 
             AuthContext authContext = null;
