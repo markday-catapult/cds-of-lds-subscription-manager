@@ -47,10 +47,12 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
         if (requestContext.get(CONTEXT_CATAPULT_SPORTS) != null) {
 
             AuthContext authContext = null;
+            String authContextString = null;
             try {
-                authContext = objectMapper.readValue(String.valueOf(requestContext.get(CONTEXT_CATAPULT_SPORTS)), AuthContext.class);
+                authContextString = String.valueOf(requestContext.get(CONTEXT_CATAPULT_SPORTS));
+                authContext = objectMapper.readValue(authContextString, AuthContext.class);
             } catch (JsonProcessingException e) {
-                logger.error("Unable to parse auth context:{}",e.getMessage());
+                logger.error("Unable to parse auth context {}:Error {}",authContextString,e.getMessage());
                 throw new SubscriptionException("Unable to parse auth context");
             }
 
