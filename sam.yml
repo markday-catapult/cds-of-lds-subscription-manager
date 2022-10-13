@@ -186,6 +186,7 @@ Resources:
             Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
           LDS_REDIS_PORT:
             Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
+          LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT_ENV: https://au.catapultsports.com/api/v6/microauth/resources/check
 
   WebsocketSubscribeRequestFunctionApiGatewayPermission:
     Type: AWS::Lambda::Permission
@@ -447,7 +448,20 @@ Resources:
       RouteResponseKey: $default
     DependsOn:
       ApiGatewayConnectionMaintenanceRequestRoute
-
+  ApiGatewayDeploy:
+    Type: AWS::ApiGatewayV2::Deployment
+    Properties:
+      ApiId:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:api-id'
+      Description: Deploying api gateway
+      StageName:
+        Fn::ImportValue: !Sub '${ApiGatewayStack}:stage-name'
+    DependsOn:
+      - ApiGatewayConnectRoute
+      - ApiGatewaySubscribeRequestRoute
+      - ApiGatewayUnubscribeRequestRoute
+      - ApiGatewayDisconnectRoute
+      - ApiGatewayConnectionMaintenanceRequestRoute
 
 Outputs:
   WebsocketConnectFunction:

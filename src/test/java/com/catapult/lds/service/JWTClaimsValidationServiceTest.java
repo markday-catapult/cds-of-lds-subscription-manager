@@ -33,9 +33,9 @@ public class JWTClaimsValidationServiceTest {
         Map<String,Object> requestContext1 = Map.of("catapultsports",mapper.writeValueAsString(context));
         Assert.assertThrows(UnauthorizedUserException.class,()->jwtValidationService.validateClaims("ee8758ec-fe5f-4574-8b71-ba24f30ee672",requestContext1));
 
-        context.getAuth().getClaims().setSub("");
+        context.getAuth().getClaims().setSub(null);
         Map<String,Object> requestContext2 = Map.of("catapultsports",mapper.writeValueAsString(context));
-        Assert.assertThrows(UnauthorizedUserException.class,()->jwtValidationService.validateClaims("ee8758ec-fe5f-4574-8b71-ba24f30ee672",requestContext2));
+        Assert.assertThrows(SubscriptionException.class,()->jwtValidationService.validateClaims("ee8758ec-fe5f-4574-8b71-ba24f30ee672",requestContext2));
 
     }
 

@@ -27,7 +27,19 @@ import java.util.Set;
 public class JWTClaimsValidationService implements ClaimsValidationService {
 
 
+    /**
+     * The name of the environment variable which has a value of openfield micorauth resource check endpoint
+     */
+    private static final String LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT_ENV = "LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT";
+
+    /**
+     * Key in the request context map which has authorizer data as value
+     */
     private static final String CONTEXT_CATAPULT_SPORTS = "catapultsports";
+
+    /**
+     * LDS scope in the JWT claim used to check access permission.
+     */
     private static final String CONTEXT_LDS_SCOPE = "com.catapultsports.services.LDS";
 
     /**
@@ -44,7 +56,13 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
      */
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * Httpclient used by the service to make a call to Open Field microauth resource check endpoint
+     *
+     * @invariant httpClient != null
+     */
     private static final CloseableHttpClient httpClient = HttpClientBuilder.create().build();
+
 
     /**
      * {@inheritDoc}
@@ -73,8 +91,12 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
                 throw new SubscriptionException("Unable to parse auth context");
             }
 
+            if(authContext.getSubject() == null || authContext.getToken() == null || authContext.getAuth().getClaims() ==null){
+                throw new SubscriptionException("Unable to validate user permissions");
+            }
+
             //validating user permissions
-            if(!validateUserPermissions(authContext.getSubject(),userId,authContext.getToken())){
+            if(!validUserPermissions(authContext.getSubject(),userId,authContext.getToken())){
                 throw new UnauthorizedUserException("User does not have permission to access the subscribed resources");
             }
 
@@ -86,8 +108,7 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
         }
     }
 
-    private boolean validateUserPermissions(String subscribingUser,String subscribedUserResource,String authToken){
-
+    private boolean validUserPermissions(String subscribingUser, String subscribedUserResource, String authToken){
 
         //Returning true if subscriber is same as subscribed resource owner
         if(subscribingUser.equalsIgnoreCase(subscribedUserResource)){
@@ -98,25 +119,15 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
         CloseableHttpResponse response;
         try {
 
-            HttpPost httpPost = new HttpPost("https://au.catapultsports.com/api/v6/microauth/resources/check");
-            String resourceCheckRequest = objectMapper.writeValueAsString(ResourceCheckRequest.builder().users(Set.of(subscribingUser,subscribedUserResource)).build());
-            StringEntity entity = new StringEntity(resourceCheckRequest);
-            entity.setContentType(String.valueOf(ContentType.APPLICATION_JSON));
-            entity.setContentEncoding("gzip, deflate, br");
-            httpPost.setEntity(entity);
-            httpPost.setHeader("Accept", "application/json");
-            httpPost.setHeader("Content-type", "application/json");
-            httpPost.setHeader("Authorization","Bearer "+authToken);
-            httpPost.setHeader("Accept-Encoding", "gzip, deflate, br");
-           /* EntityBuilder builder = EntityBuilder.create();
-            builder.setContentType(ContentType.APPLICATION_JSON);
-            builder.setText(resourceCheckRequest);
-            //builder.setContentEncoding("gzip, deflate, br");
-            httpPost.setEntity(builder.build());
-            httpPost.setHeader("Authorization","Bearer "+authToken);*/
-           // httpPost.setHeader("Accept","*/*");
+            HttpPost httpPost = new HttpPost(System.getenv(LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT_ENV));
 
+            StringEntity entity = new StringEntity(objectMapper.writeValueAsString(ResourceCheckRequest.builder()
+                    .user(Set.of(subscribingUser,subscribedUserResource)).build()));
+            entity.setContentType(String.valueOf(ContentType.APPLICATION_JSON));
+            httpPost.setEntity(entity);
+            httpPost.setHeader("Authorization","Bearer "+authToken);
             response = httpClient.execute(httpPost);
+
         } catch (UnsupportedEncodingException | JsonProcessingException e) {
             logger.error("Error validating user permissions, Error while creating request :{}",e.getMessage());
             return false;
@@ -126,14 +137,14 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
         }
 
         try {
-
             if(response.getStatusLine().getStatusCode() == 200) {
                 String resourceCheckResponseString = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
                 ResourceCheckResponse resourceCheckResponse = objectMapper.readValue(resourceCheckResponseString,ResourceCheckResponse.class);
-                return resourceCheckResponse.getUser().stream().filter(user-> !user.isRead()).findFirst().isPresent();
+                ResourceIdentifier id =resourceCheckResponse.getUser().stream().filter(user->!user.isRead()).findFirst().get();
+                return !resourceCheckResponse.getUser().stream().filter(user->!user.isRead()).findFirst().isPresent();
 
             }else{
-                logger.error("Resource check call gave a non 200 response");
+                logger.error("Resource check call gave a non 200 response: Http Status code {}", response.getStatusLine().getStatusCode() );
                 return false;
             }
 
@@ -146,7 +157,7 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
     @Data
     @Builder
     public static  class ResourceCheckRequest {
-        private Set<String > users = null ;
+        private Set<String > user = null ;
 
     }
 
