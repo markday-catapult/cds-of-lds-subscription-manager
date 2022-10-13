@@ -22,6 +22,9 @@ public final class AuthContext {
     public String getSubject(){
         return auth != null && auth.claims != null && auth.claims.sub != null ? auth.claims.getSub() : null;
     }
+    public String getToken(){
+        return auth != null && auth.token != null ? auth.getToken():null;
+    }
     public boolean containsScope(String scopeName){
         return auth != null && auth.claims != null && auth.claims.scopes!=null?
                 auth.claims.getScopes().stream().filter(s->s.equalsIgnoreCase(scopeName)).findFirst().isPresent():false;
@@ -31,6 +34,7 @@ public final class AuthContext {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class Auth {
         private Claims claims;
+        private String token;
 
     }
 
