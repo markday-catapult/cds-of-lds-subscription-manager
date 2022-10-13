@@ -135,13 +135,13 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
                     HttpURLConnection.HTTP_INTERNAL_ERROR,
                     subscriptionRequest.requestId,
                     e.getMessage());
-        } catch (UnauthorizedUserException e) {
+        } /*catch (UnauthorizedUserException e) {
             // notify the client of any error
             return Util.createSubscriptionErrorResponse(
                     HttpURLConnection.HTTP_UNAUTHORIZED,
                     subscriptionRequest.requestId,
                     e.getMessage());
-        }
+        }*/
     }
 
     /**
