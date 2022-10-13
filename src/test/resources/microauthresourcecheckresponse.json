@@ -1,0 +1,14 @@
+{
+  "user": [
+    {
+      "type": "user",
+      "identifier": "invalidUserId",
+      "read": false
+    },
+    {
+      "type": "user",
+      "identifier": "ee8758ec-fe5f-4574-8b71-ba24f30ee672",
+      "read": true
+    }
+  ]
+}
