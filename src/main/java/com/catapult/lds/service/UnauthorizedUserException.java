@@ -1,7 +1,8 @@
 package com.catapult.lds.service;
 
 /**
- * {@code UnauthorizedUserException} is an exception that gets thrown when JWT claims validations fails.
+ * {@code UnauthorizedUserException} is an exception that gets thrown when a subscription 
+ * request is denied due to the requester being unauthorized to access the requested data.
  */
 public class UnauthorizedUserException extends Exception {
 
