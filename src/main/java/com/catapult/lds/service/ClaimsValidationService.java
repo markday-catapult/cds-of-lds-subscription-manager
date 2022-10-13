@@ -10,5 +10,5 @@ public interface ClaimsValidationService {
      * Validates the userId in the subscription request is same as the subject in JWT .
      * Also validates if LDS claim is available in JWT token and throws an exception if validation fails.
      */
-     void validateClaims(String username, Map<String, Object> requestContext) throws SubscriptionException;
+     void validateClaims(String username, Map<String, Object> requestContext) throws UnauthorizedUserException, SubscriptionException;
 }

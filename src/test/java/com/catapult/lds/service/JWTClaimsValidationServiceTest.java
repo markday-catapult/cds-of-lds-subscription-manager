@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.Map;
 
 import static java.util.stream.Collectors.joining;
@@ -17,25 +18,24 @@ public class JWTClaimsValidationServiceTest {
     ObjectMapper mapper = new ObjectMapper();
 
     @Test
-    void testValidateJWTToken() throws IOException, SubscriptionException {
+    void testValidateJWTToken() throws IOException, SubscriptionException, UnauthorizedUserException {
 
         Path path = Paths.get("src/test/resources/authcontext.json");
         String jsonData = Files.lines(path).collect(joining("\n"));
-        Map<String,Object> requestContext = mapper.readValue(jsonData, Map.class);
-
+        AuthContext context = mapper.readValue(jsonData, AuthContext.class);
+        Map<String,Object> requestContext = Map.of("catapultsports",mapper.writeValueAsString(context));
         JWTClaimsValidationService jwtValidationService = new JWTClaimsValidationService();
         jwtValidationService.validateClaims("ee8758ec-fe5f-4574-8b71-ba24f30ee672",requestContext);
 
-        Assert.assertThrows(SubscriptionException.class,()->jwtValidationService.validateClaims("invalidUserId",requestContext));
+        Assert.assertThrows(UnauthorizedUserException.class,()->jwtValidationService.validateClaims("invalidUserId",requestContext));
 
-        AuthContext authContext = mapper.convertValue(requestContext.get("catapultsports"), AuthContext.class);
-        authContext.getAuth().getClaims().setScopes(null);
-        requestContext.put("catapultsports",authContext);
-        Assert.assertThrows(SubscriptionException.class,()->jwtValidationService.validateClaims("ee8758ec-fe5f-4574-8b71-ba24f30ee672",requestContext));
+        context.getAuth().getClaims().setScopes(new HashSet<>());
+        Map<String,Object> requestContext1 = Map.of("catapultsports",mapper.writeValueAsString(context));
+        Assert.assertThrows(UnauthorizedUserException.class,()->jwtValidationService.validateClaims("ee8758ec-fe5f-4574-8b71-ba24f30ee672",requestContext1));
 
-        authContext.getAuth().getClaims().setSub(null);
-        requestContext.put("catapultsports",authContext);
-        Assert.assertThrows(SubscriptionException.class,()->jwtValidationService.validateClaims("ee8758ec-fe5f-4574-8b71-ba24f30ee672",requestContext));
+        context.getAuth().getClaims().setSub("");
+        Map<String,Object> requestContext2 = Map.of("catapultsports",mapper.writeValueAsString(context));
+        Assert.assertThrows(UnauthorizedUserException.class,()->jwtValidationService.validateClaims("ee8758ec-fe5f-4574-8b71-ba24f30ee672",requestContext2));
 
     }
 
