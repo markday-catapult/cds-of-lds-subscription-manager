@@ -16,25 +16,23 @@ public class SubscribeRequestHandlerTest {
     private final Logger logger = LoggerFactory.getLogger(SubscribeRequestHandlerTest.class);
 
     @Test
-    void testSubscriptionRequestNamespaces() {
+    void testTimeseriesSubscriptionRequestDeviceNamespaces() {
 
         final String dataClass = "ts";
 
-        final String devKey = "device";
-        final String athKey = "athlete";
+        final String userId = "user-id-guid";
 
         final String devId1 = "dev-id-15556567";
         final String devId2 = "dev-id-2342342";
-        final String athId1 = "ath-id-33223434";
         SubscribeRequestHandler.SubscriptionRequest.SubscriptionRequestResources resources =
                 SubscribeRequestHandler.SubscriptionRequest.SubscriptionRequestResources.builder()
-                        .athleteIds(Set.of(athId1))
                         .deviceIds(Set.of(devId1, devId2)).build();
 
         SubscribeRequestHandler.SubscriptionRequest subscriptionRequest =
                 SubscribeRequestHandler.SubscriptionRequest.builder()
                         .requestId("request-abc")
                         .action("subscribe")
+                        .userId(userId)
                         .dataClass(dataClass)
                         .resources(resources)
                         .build();
@@ -44,17 +42,46 @@ public class SubscribeRequestHandlerTest {
         Assert.assertTrue(namespacedResources.contains(String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
                 dataClass,
                 ResourceNameSpace.DEVICE.value(),
+                userId,
                 devId1)));
 
         Assert.assertTrue(namespacedResources.contains(String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
                 dataClass,
                 ResourceNameSpace.DEVICE.value(),
+                userId,
                 devId1)));
+
+        namespacedResources.forEach(r -> logger.info(r));
+    }
+
+    @Test
+    void testTimeseriesSubscriptionRequestUserNamespaces() {
+
+        final String dataClass = "ts";
+
+        final String userId = "user-id-guid";
+
+        final String devId1 = "dev-id-15556567";
+        final String devId2 = "dev-id-2342342";
+        SubscribeRequestHandler.SubscriptionRequest.SubscriptionRequestResources resources =
+                SubscribeRequestHandler.SubscriptionRequest.SubscriptionRequestResources.builder()
+                        .deviceIds(Set.of(devId1, devId2)).build();
+
+        SubscribeRequestHandler.SubscriptionRequest subscriptionRequest =
+                SubscribeRequestHandler.SubscriptionRequest.builder()
+                        .requestId("request-abc")
+                        .action("subscribe")
+                        .userId(userId)
+                        .dataClass(dataClass)
+                        .build();
+
+        Set<String> namespacedResources = subscriptionRequest.getNamespacedResources();
 
         Assert.assertTrue(namespacedResources.contains(String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
                 dataClass,
-                ResourceNameSpace.ATHLETE.value(),
-                athId1)));
+                ResourceNameSpace.USER.value(),
+                userId,
+                "")));
 
         namespacedResources.forEach(r -> logger.info(r));
     }
