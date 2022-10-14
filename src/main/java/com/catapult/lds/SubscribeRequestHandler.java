@@ -161,13 +161,9 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
     public static class SubscriptionRequest {
 
         private String action;
-
         private String dataClass;
-
         private String requestId;
-
         private String userId;
-
         private SubscriptionRequestResources resources;
 
         /**
