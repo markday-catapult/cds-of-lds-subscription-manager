@@ -5,8 +5,6 @@ import com.catapult.lds.service.RedisSubscriptionCacheService;
 import com.catapult.lds.service.SubscriptionCacheService;
 import org.json.JSONObject;
 
-import java.util.Map;
-
 /**
  * {@code Util} provides generic convenience methods to all handlers.
  */
@@ -30,7 +28,6 @@ public class Util {
         APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
         response.setStatusCode(status);
         response.setBody(responseBody.toString());
-        response.setHeaders(Map.of("Sec-WebSocket-Protocol","websocket"));
         return response;
     }
 
