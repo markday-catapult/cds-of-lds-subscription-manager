@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
+import java.util.Map;
 
 /**
  * {@code ConnectHandler} is an implementation of {@link RequestHandler} that establishes a WebSocket connection.
@@ -58,6 +59,7 @@ public class ConnectHandler implements RequestHandler<APIGatewayV2WebSocketEvent
             subscriptionCacheService.createConnection(connectionId);
 
             APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
+            response.setHeaders(Map.of("Sec-WebSocket-Protocol","websocket"));
             response.setStatusCode(HttpURLConnection.HTTP_OK);
             response.setBody("ok");
             return response;
