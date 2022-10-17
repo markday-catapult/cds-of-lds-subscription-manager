@@ -2,7 +2,6 @@ package com.catapult.lds.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Builder;
-import lombok.Data;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
@@ -19,18 +18,34 @@ public final class AuthContext {
 
     private Auth auth;
 
-    public String getSubject(){
+    /**
+     * Returns sub attribute in JWT token details available in context
+     */
+    public String getSubject() {
         return auth != null && auth.claims != null && auth.claims.sub != null ? auth.claims.getSub() : null;
     }
-    public String getToken(){
-        return auth != null && auth.token != null ? auth.getToken():null;
-    }
-    public boolean containsScope(String scopeName){
-        return auth != null && auth.claims != null && auth.claims.scopes!=null?
-                auth.claims.getScopes().stream().filter(s->s.equalsIgnoreCase(scopeName)).findFirst().isPresent():false;
+
+    /**
+     * Returns jwt token available in context
+     */
+    public String getToken() {
+        return auth != null && auth.token != null ? auth.getToken() : null;
     }
 
-    @Data
+    /**
+     * Checks if the provided scopeName is present in the list of scopes available in context
+     */
+    public boolean containsScope(String scopeName) {
+        return auth != null && auth.claims != null && auth.claims.scopes != null ?
+                auth.claims.getScopes().stream().filter(s -> s.equalsIgnoreCase(scopeName)).findFirst().isPresent() : false;
+    }
+
+    /**
+     * {@code Auth} is the representation of Auth attribute in the request context
+     */
+    @Builder
+    @Jacksonized
+    @Value
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class Auth {
         private Claims claims;
@@ -38,7 +53,12 @@ public final class AuthContext {
 
     }
 
-    @Data
+    /**
+     * {@code Claims} is the representation of Claim attribute in the {@code Auth}
+     */
+    @Builder
+    @Jacksonized
+    @Value
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class Claims {
         private String sub;
