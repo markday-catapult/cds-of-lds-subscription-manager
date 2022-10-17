@@ -75,6 +75,15 @@ Parameters:
     Description: 'The name of the api gateway authorizer  stack.'
     Type: String
 
+Mappings:
+  MicroauthEndpointMapping:
+    ap-southeast-2:
+      Name: https://au.catapultsports.com/api/v6/microauth/resources/check
+    us-west-1:
+      Name: https://us.catapultsports.com/api/v6/microauth/resources/check
+    eu-west-1:
+      Name: https://eu.catapultsports.com/api/v6/microauth/resources/check
+
 Conditions:
   UseStackNamespace: !Or [ !Equals [ !Ref StackEnv, "dev" ], !Equals [ !Ref StackEnv, "test" ] ]
 
@@ -186,7 +195,12 @@ Resources:
             Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
           LDS_REDIS_PORT:
             Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
-          LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT_ENV: https://au.catapultsports.com/api/v6/microauth/resources/check
+          LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT_ENV:
+            Fn::FindInMap:
+              - MicroauthEndpointMapping
+              - !Ref 'AWS::Region'
+              - Name
+
 
   WebsocketSubscribeRequestFunctionApiGatewayPermission:
     Type: AWS::Lambda::Permission
@@ -474,3 +488,8 @@ Outputs:
     Value: !GetAtt WebsocketConnectFunction.Arn
     Export:
       Name: !Sub '${AWS::StackName}:websocket-connect-function-arn'
+  ApiGatewayDeployId:
+    Description: Api gateway deployment id
+    Value: !Ref ApiGatewayDeploy
+    Export:
+      Name: !Sub '${AWS::StackName}:api-gateway-deployment-id'

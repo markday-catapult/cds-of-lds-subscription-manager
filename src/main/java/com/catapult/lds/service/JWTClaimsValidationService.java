@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,9 +27,11 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
 
 
     /**
-     * The name of the environment variable which has a value of openfield micorauth resource check endpoint
+     * The name of the environment variable which has a value of open field micro auth resource check endpoint
      */
     private static final String LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT_ENV = "LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT";
+
+    private static String resourceCheckEndpoint = null;
 
     /**
      * Key in the request context map which has authorizer data as value
@@ -61,7 +62,31 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
      *
      * @invariant httpClient != null
      */
-    private static final CloseableHttpClient httpClient = HttpClientBuilder.create().build();
+    private static CloseableHttpClient httpClient = null;
+
+    /**
+     * Creates a new {@code JWTClaimsValidationService}.
+     */
+    public JWTClaimsValidationService(){
+        JWTClaimsValidationService.httpClient = HttpClientBuilder.create().build();
+        JWTClaimsValidationService.resourceCheckEndpoint = System.getenv(LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT_ENV);
+    }
+
+    /**
+     * Creates a new {@code JWTClaimsValidationService} with the given http client and endpoint.
+     * <p>
+     * This constructor is used by Junit tests only.
+     *
+     * @pre httpClient != null
+     * @pre resourceCheckEndpoint != null
+     */
+    public JWTClaimsValidationService(CloseableHttpClient httpClient,String resourceCheckEndpoint){
+        assert (httpClient != null);
+        assert (resourceCheckEndpoint != null);
+
+        JWTClaimsValidationService.httpClient =httpClient;
+        JWTClaimsValidationService.resourceCheckEndpoint = resourceCheckEndpoint;
+    }
 
 
     /**
@@ -108,40 +133,45 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
         }
     }
 
-    private boolean validUserPermissions(String subscribingUser, String subscribedUserResource, String authToken){
+    private boolean validUserPermissions(String subscribingUserId, String subscribedUserResourceId, String authToken){
 
         //Returning true if subscriber is same as subscribed resource owner
-        if(subscribingUser.equalsIgnoreCase(subscribedUserResource)){
+        if(subscribingUserId.equalsIgnoreCase(subscribedUserResourceId)){
             return true;
         }
 
-        //Validating the relationship between subscriber and subscribed resource owner
+        //Making http call to the microauth resource check endpoint
         CloseableHttpResponse response;
         try {
 
-            HttpPost httpPost = new HttpPost(System.getenv(LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT_ENV));
+            HttpPost httpPost = new HttpPost(resourceCheckEndpoint);
 
             StringEntity entity = new StringEntity(objectMapper.writeValueAsString(ResourceCheckRequest.builder()
-                    .user(Set.of(subscribingUser,subscribedUserResource)).build()));
+                    .user(Set.of(subscribingUserId,subscribedUserResourceId)).build()));
             entity.setContentType(String.valueOf(ContentType.APPLICATION_JSON));
             httpPost.setEntity(entity);
             httpPost.setHeader("Authorization","Bearer "+authToken);
             response = httpClient.execute(httpPost);
 
         } catch (UnsupportedEncodingException | JsonProcessingException e) {
-            logger.error("Error validating user permissions, Error while creating request :{}",e.getMessage());
+            logger.error("Error validating user permissions, Error while creating request :{}",e);
             return false;
         } catch (IOException e) {
-            logger.error("Error validating user permissions {}",e.getMessage());
+            logger.error("Error validating user permissions {}",e);
             return false;
         }
 
+        //Validating the relationship between subscriber userId and subscribed resource userId
         try {
             if(response.getStatusLine().getStatusCode() == 200) {
-                String resourceCheckResponseString = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+                String resourceCheckResponseString = EntityUtils.toString(response.getEntity());
                 ResourceCheckResponse resourceCheckResponse = objectMapper.readValue(resourceCheckResponseString,ResourceCheckResponse.class);
-                ResourceIdentifier id =resourceCheckResponse.getUser().stream().filter(user->!user.isRead()).findFirst().get();
-                return !resourceCheckResponse.getUser().stream().filter(user->!user.isRead()).findFirst().isPresent();
+
+                // Checking if the read attribute of the subscribed resource userId is true in the response
+                return resourceCheckResponse.getUser().stream()
+                        .filter(user->user.getIdentifier().equals(subscribedUserResourceId) &&user.isRead())
+                        .findFirst()
+                        .isPresent();
 
             }else{
                 logger.error("Resource check call gave a non 200 response: Http Status code {}", response.getStatusLine().getStatusCode() );
@@ -149,7 +179,7 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
             }
 
         } catch (IOException e) {
-            logger.error("Error validating resource check response {}",e.getMessage());
+            logger.error("Error validating resource check response {}",e);
             return false;
         }
     }
@@ -160,7 +190,6 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
         private Set<String > user = null ;
 
     }
-
     @Data
     public static class ResourceCheckResponse{
         private List<ResourceIdentifier> user;
