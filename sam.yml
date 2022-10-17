@@ -195,7 +195,7 @@ Resources:
             Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-address'
           LDS_REDIS_PORT:
             Fn::ImportValue: !Sub  '${RedisStack}:primary-end-point-port'
-          LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT_ENV:
+          LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT:
             Fn::FindInMap:
               - MicroauthEndpointMapping
               - !Ref 'AWS::Region'
