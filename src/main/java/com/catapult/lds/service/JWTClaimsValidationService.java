@@ -122,7 +122,7 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
             }
 
             //validating user permissions
-            if(!validUserPermissions(authContext.getSubject(),userId,authContext.getToken())){
+            if(!validateUserPermissions(authContext.getSubject(),userId,authContext.getToken())){
                 throw new UnauthorizedUserException("User does not have permission to access the subscribed resources");
             }
 
@@ -134,7 +134,7 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
         }
     }
 
-    private boolean validUserPermissions(String subscribingUserId, String subscribedUserResourceId, String authToken){
+    private boolean validateUserPermissions(String subscribingUserId, String subscribedUserResourceId, String authToken){
 
         //Returning true if subscriber is same as subscribed resource owner
         if(subscribingUserId.equalsIgnoreCase(subscribedUserResourceId)){
