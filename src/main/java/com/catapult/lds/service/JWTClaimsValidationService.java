@@ -27,7 +27,8 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
 
 
     /**
-     * The name of the environment variable which has a value of open field micro auth resource check endpoint
+     * The name of the environment variable which has a value of open field micro
+     * auth resource check endpoint
      */
     private static final String LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT_ENV = "LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT";
 
@@ -184,17 +185,30 @@ public class JWTClaimsValidationService implements ClaimsValidationService {
         }
     }
 
+    /**
+     * POJO class representing the micro auth resource check request
+     */
     @Data
     @Builder
     public static  class ResourceCheckRequest {
+
+        /**
+         * A set of userId's for which relationship needs to be checked.
+         */
         private Set<String > user = null ;
 
     }
+    /**
+     * POJO class representing the micro auth resource check response
+     */
     @Data
     public static class ResourceCheckResponse{
         private List<ResourceIdentifier> user;
 
     }
+    /**
+     * POJO class representing individual node in {@code ResourceCheckResponse}
+     */
     @Data
     public static class ResourceIdentifier{
         private String type;
