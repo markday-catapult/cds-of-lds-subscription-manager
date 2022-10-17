@@ -105,8 +105,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
 
             if (subscriptionRequest.requestId == null ||
                     subscriptionRequest.dataClass == null ||
-                    subscriptionRequest.userId == null ||
-                    subscriptionRequest.resources == null) {
+                    subscriptionRequest.userId == null) {
                 return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
                         subscriptionRequest.requestId, "Subscription request missing required fields");
             }
@@ -177,7 +176,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
             if (this.resources == null) {
                 return Collections.singleton(
                         String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
-                                dataClass,
+                                this.dataClass,
                                 ResourceNameSpace.USER.value(),
                                 this.userId,
                                 ""));
@@ -185,7 +184,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
 
             if (Objects.nonNull(this.resources.deviceIds)) {
                 nameSpacedResources.addAll(this.resources.deviceIds.stream().map(d -> String.format(SubscribeRequestHandler.NAMESPACED_RESOURCE_PATTERN,
-                        dataClass,
+                        this.dataClass,
                         ResourceNameSpace.DEVICE.value(),
                         this.userId,
                         d)).collect(toSet()));
