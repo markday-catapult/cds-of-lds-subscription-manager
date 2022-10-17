@@ -10,6 +10,7 @@ import com.catapult.lds.service.ResourceNameSpace;
 import com.catapult.lds.service.Subscription;
 import com.catapult.lds.service.SubscriptionCacheService;
 import com.catapult.lds.service.SubscriptionException;
+import com.catapult.lds.service.UnauthorizedUserException;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
