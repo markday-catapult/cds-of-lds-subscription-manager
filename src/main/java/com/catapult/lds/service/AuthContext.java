@@ -43,7 +43,7 @@ public final class AuthContext {
     private Auth auth;
 
     /**
-     * Extracts {@code AuthContext} from the give request context map
+     * Extracts {@code AuthContext} from the given request context map
      *
      * @throws SubscriptionException if request context is empty,null or data cannot be parsed
      */
