@@ -7,13 +7,13 @@ import java.util.Map;
  */
 public interface SubscriptionAuthorizationService {
     /**
-     * Validates the userId in the subscription request is same as the subject in JWT .
-     * Also validates if LDS claim is available in JWT token and throws an exception if validation fails.
+     * Performs an authorization check by making sure the the principal (JWT sub in the request context) can view data attributed
+     * to the given user id.
      *
      * @throws SubscriptionException
      * @throws UnauthorizedUserException
      * @pre userId != null
      * @pre requestContext != null
      */
-    void validateClaims(String username, Map<String, Object> requestContext) throws UnauthorizedUserException, SubscriptionException;
+    void validateClaims(String userId, Map<String, Object> requestContext) throws UnauthorizedUserException, SubscriptionException;
 }

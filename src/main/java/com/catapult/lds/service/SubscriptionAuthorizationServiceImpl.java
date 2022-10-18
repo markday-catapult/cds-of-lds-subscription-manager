@@ -121,13 +121,8 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
             if (authContext.getToken() == null) {
                 throw new SubscriptionException("Unable to validate user permissions, Token not found");
             }
-            if (authContext.getAuth().getClaims() == null) {
+            if (authContext.getAuth() == null || authContext.getAuth().getClaims() == null) {
                 throw new SubscriptionException("Unable to validate user permissions, Claims not found");
-            }
-
-            // checking user permissions
-            if (!checkPermissionsOnUserResource(authContext.getSubject(), userId, authContext.getToken())) {
-                throw new UnauthorizedUserException("User does not have permission to access the subscribed resources");
             }
 
             // validating LDS scope
@@ -135,13 +130,30 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
                 logger.error("Invalid scope: LDS scope not available");
                 throw new UnauthorizedUserException("User does not have permission to access live data");
             }
+
+            // checking user permissions
+            if (!checkPermissionsOnUserResource(authContext.getSubject(), userId, authContext.getToken())) {
+                throw new UnauthorizedUserException("User does not have permission to access the subscribed resources");
+            }
+
         }
     }
 
-    private boolean checkPermissionsOnUserResource(String principal, String subscribedUserResourceId, String authToken) {
+    /**
+     * returns true if the given jwtSub has access to a live data stream attributed to the given subscribed user resource id
+     *
+     * @pre jwtSub != null
+     * @pre subscribedUserResourceId != null
+     * @pre authToken!= null
+     */
+    private boolean checkPermissionsOnUserResource(String jwtSub, String subscribedUserResourceId, String authToken) {
+
+        assert (jwtSub != null);
+        assert (subscribedUserResourceId != null);
+        assert (authToken != null);
 
         // Return true if subscriber is same as subscribed resource owner
-        if (principal.equalsIgnoreCase(subscribedUserResourceId)) {
+        if (jwtSub.equalsIgnoreCase(subscribedUserResourceId)) {
             return true;
         }
 
@@ -152,17 +164,17 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
             HttpPost httpPost = new HttpPost(resourceCheckEndpoint);
 
             StringEntity entity = new StringEntity(objectMapper.writeValueAsString(ResourceCheckRequest.builder()
-                    .user(Set.of(principal, subscribedUserResourceId)).build()));
+                    .user(Set.of(jwtSub, subscribedUserResourceId)).build()));
             entity.setContentType(String.valueOf(ContentType.APPLICATION_JSON));
             httpPost.setEntity(entity);
             httpPost.setHeader("Authorization", "Bearer " + authToken);
             response = httpClient.execute(httpPost);
 
         } catch (UnsupportedEncodingException | JsonProcessingException e) {
-            logger.error("Error validating user permissions, Error while creating request :{}", e);
+            logger.error("Error validating user permissions, Error while creating request", e);
             return false;
         } catch (IOException e) {
-            logger.error("Error validating user permissions {}", e);
+            logger.error("Error validating user permissions", e);
             return false;
         }
 
@@ -174,9 +186,7 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
 
                 // Checking if the read attribute of the subscribed resource userId is true in the response
                 return resourceCheckResponse.getUserIds().stream()
-                        .filter(user -> user.getIdentifier().equals(subscribedUserResourceId) && user.isRead())
-                        .findFirst()
-                        .isPresent();
+                        .anyMatch(user -> user.getIdentifier().equals(subscribedUserResourceId) && user.isRead());
 
             } else {
                 logger.error("Resource check call gave a non 200 response: Http Status code {}", response.getStatusLine().getStatusCode());
@@ -184,7 +194,7 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
             }
 
         } catch (IOException e) {
-            logger.error("Error validating resource check response {}", e);
+            logger.error("Error validating resource check response ", e);
             return false;
         }
     }
