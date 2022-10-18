@@ -33,7 +33,7 @@ public final class AuthContext {
     }
 
     /**
-     * Returns true if the provided scopeName is present in the list of scopes available in the context
+     * Returns true if the given scopeName is present in the list of scopes available in the context
      */
     public boolean containsScope(String scopeName) {
         return auth != null && auth.claims != null && auth.claims.scopes != null ?

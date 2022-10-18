@@ -127,7 +127,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
             Subscription subscription = new Subscription(connectionId, resources);
 
             // JWT claims validation
-            subscriptionAuthorizationService.validateClaims(subscriptionRequest.getUserId(), event.getRequestContext().getAuthorizer());
+            subscriptionAuthorizationService.checkAuthorizationForUserResource(subscriptionRequest.getUserId(), event.getRequestContext().getAuthorizer());
 
             // Add the subscription
             subscriptionCacheService.addSubscription(subscription);

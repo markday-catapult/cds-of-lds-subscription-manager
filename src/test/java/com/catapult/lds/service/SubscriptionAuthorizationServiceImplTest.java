@@ -51,10 +51,10 @@ public class SubscriptionAuthorizationServiceImplTest {
         SubscriptionAuthorizationServiceImpl jwtValidationService = new SubscriptionAuthorizationServiceImpl(httpClientMock, "dummyEndpoint");
 
         //subscriber abd subscriber resource userId are the same
-        jwtValidationService.validateClaims("ee8758ec-fe5f-4574-8b71-ba24f30ee672", requestContext);
+        jwtValidationService.checkAuthorizationForUserResource("ee8758ec-fe5f-4574-8b71-ba24f30ee672", requestContext);
 
         //subscriber and subscriber resource userId belongs to the same account
-        jwtValidationService.validateClaims("validUserId", requestContext);
+        jwtValidationService.checkAuthorizationForUserResource("validUserId", requestContext);
 
     }
 

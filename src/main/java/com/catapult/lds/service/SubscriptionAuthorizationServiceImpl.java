@@ -97,7 +97,7 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
      * {@inheritDoc}
      */
     @Override
-    public void validateClaims(String userId, Map<String, Object> requestContext) throws UnauthorizedUserException, SubscriptionException {
+    public void checkAuthorizationForUserResource(String userId, Map<String, Object> requestContext) throws UnauthorizedUserException, SubscriptionException {
 
         assert (userId != null);
         assert (requestContext != null);
@@ -171,10 +171,10 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
             response = httpClient.execute(httpPost);
 
         } catch (UnsupportedEncodingException | JsonProcessingException e) {
-            logger.error("Error validating user permissions, Error while creating request", e);
+            logger.error("Error creating request to check permissions on resource", e);
             return false;
         } catch (IOException e) {
-            logger.error("Error validating user permissions", e);
+            logger.error("Error checking permissions on resource", e);
             return false;
         }
 
@@ -207,7 +207,7 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
     public static class ResourceCheckRequest {
 
         /**
-         * A set of userId's for which relationship needs to be checked.
+         * A set of user ids for which relationship needs to be checked.
          */
         private Set<String> user;
 
