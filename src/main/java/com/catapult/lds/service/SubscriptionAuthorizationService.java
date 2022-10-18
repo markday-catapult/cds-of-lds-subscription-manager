@@ -6,7 +6,8 @@ package com.catapult.lds.service;
 public interface SubscriptionAuthorizationService {
 
     /**
-     * Performs an authorization check by making sure that {@link AuthContext#getSubject()} can view data attributed to the given userId
+     * Performs an authorization check by making sure that {@linkplain AuthContext#getSubject authenticated user} can view data 
+     * attributed to the given user id
      *
      * @throws SubscriptionException     if data expected to be in the given request context is not present
      * @throws UnauthorizedUserException if the principal identified by the jwt sub claim does not have access to the data
