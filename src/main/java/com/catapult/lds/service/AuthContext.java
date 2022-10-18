@@ -51,7 +51,7 @@ public final class AuthContext {
 
         if (requestContext == null || requestContext.isEmpty()) {
             logger.error("Request context is null or empty");
-            throw new SubscriptionException("Request context is null or empty.Unable to check user permissions");
+            throw new SubscriptionException("Request context is null or empty. Unable to check user permissions");
         }
 
         final AuthContext authContext;
