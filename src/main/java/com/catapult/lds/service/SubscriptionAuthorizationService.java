@@ -3,7 +3,7 @@ package com.catapult.lds.service;
 import java.util.Map;
 
 /**
- * {@code ClaimsValidationService} provides methods for validating JWT token claims available in the lambda request context.
+ * {@code SubscriptionAuthorizationService} provides methods for checking claims available in the lambda request context.
  */
 public interface SubscriptionAuthorizationService {
     /**

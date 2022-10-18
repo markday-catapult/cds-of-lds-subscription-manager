@@ -19,21 +19,21 @@ public final class AuthContext {
     private Auth auth;
 
     /**
-     * Returns sub attribute in JWT token details available in context
+     * Returns the sub (user) claim in the JWT Authentication token if available, otherwise returns null
      */
     public String getSubject() {
         return auth != null && auth.claims != null && auth.claims.sub != null ? auth.claims.getSub() : null;
     }
 
     /**
-     * Returns jwt token available in context
+     * Returns the JWT Authentication token if available, otherwise returns null
      */
     public String getToken() {
         return auth != null && auth.token != null ? auth.getToken() : null;
     }
 
     /**
-     * Checks if the provided scopeName is present in the list of scopes available in context
+     * Returns true if the provided scopeName is present in the list of scopes available in the context
      */
     public boolean containsScope(String scopeName) {
         return auth != null && auth.claims != null && auth.claims.scopes != null ?
