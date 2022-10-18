@@ -1,0 +1,14 @@
+{
+  "user": [
+    {
+      "type": "user",
+      "identifier": "invalidUserId",
+      "read": false
+    },
+    {
+      "type": "user",
+      "identifier": "validUserId",
+      "read": true
+    }
+  ]
+}

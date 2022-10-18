@@ -1,0 +1,1 @@
+wscat -s 'websocket' -c wss://w98tf3iqsc.execute-api.ap-southeast-2.amazonaws.com/lds -H "Authorization:Bearer {Token}"
