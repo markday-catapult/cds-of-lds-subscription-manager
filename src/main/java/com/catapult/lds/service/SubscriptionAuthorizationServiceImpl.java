@@ -4,7 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
@@ -18,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -36,11 +36,6 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
      * API endpoint for Micro auth resource check
      */
     private static String resourceCheckEndpoint = null;
-
-    /**
-     * Key in the request context map which has authorizer data as value
-     */
-    private static final String CONTEXT_CATAPULT_SPORTS = "catapultsports";
 
     /**
      * LDS scope in the JWT claim used to check access permission.
@@ -97,46 +92,32 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
      * {@inheritDoc}
      */
     @Override
-    public void checkAuthorizationForUserResource(String userId, Map<String, Object> requestContext) throws UnauthorizedUserException, SubscriptionException {
+    public void checkAuthorizationForUserResource(String userId, AuthContext authContext) throws UnauthorizedUserException, SubscriptionException {
 
         assert (userId != null);
-        assert (requestContext != null);
+        assert (authContext != null);
 
-        //TODO need to throw SubscriptionException when requestContext doesn't exist.
-        if (requestContext.get(CONTEXT_CATAPULT_SPORTS) != null) {
-
-            final AuthContext authContext;
-            String authContextString = null;
-            try {
-                authContextString = String.valueOf(requestContext.get(CONTEXT_CATAPULT_SPORTS));
-                authContext = objectMapper.readValue(authContextString, AuthContext.class);
-            } catch (JsonProcessingException e) {
-                logger.error("Unable to parse auth context {}: Error {}", authContextString, e.getMessage());
-                throw new SubscriptionException("Unable to parse auth context");
-            }
-
-            if (authContext.getSubject() == null) {
-                throw new SubscriptionException("Unable to validate user permissions, Subject not found");
-            }
-            if (authContext.getToken() == null) {
-                throw new SubscriptionException("Unable to validate user permissions, Token not found");
-            }
-            if (authContext.getAuth() == null || authContext.getAuth().getClaims() == null) {
-                throw new SubscriptionException("Unable to validate user permissions, Claims not found");
-            }
-
-            // validating LDS scope
-            if (!authContext.containsScope(CONTEXT_LDS_SCOPE)) {
-                logger.error("Invalid scope: LDS scope not available");
-                throw new UnauthorizedUserException("User does not have permission to access live data");
-            }
-
-            // checking user permissions
-            if (!checkPermissionsOnUserResource(authContext.getSubject(), userId, authContext.getToken())) {
-                throw new UnauthorizedUserException("User does not have permission to access the subscribed resources");
-            }
-
+        if (authContext.getSubject() == null) {
+            throw new SubscriptionException("Unable to validate user permissions, Subject not found");
         }
+        if (authContext.getToken() == null) {
+            throw new SubscriptionException("Unable to validate user permissions, Token not found");
+        }
+        if (authContext.getAuth() == null || authContext.getAuth().getClaims() == null) {
+            throw new SubscriptionException("Unable to validate user permissions, Claims not found");
+        }
+
+        // validating LDS scope
+        if (!authContext.containsScope(CONTEXT_LDS_SCOPE)) {
+            logger.error("Invalid scope: LDS scope not available");
+            throw new UnauthorizedUserException("User does not have permission to access live data");
+        }
+
+        // checking user permissions
+        if (!checkPermissionsOnUserResource(authContext.getSubject(), userId, authContext.getToken())) {
+            throw new UnauthorizedUserException("User does not have permission to access the subscribed resources");
+        }
+
     }
 
     /**
@@ -164,7 +145,7 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
             HttpPost httpPost = new HttpPost(resourceCheckEndpoint);
 
             StringEntity entity = new StringEntity(objectMapper.writeValueAsString(ResourceCheckRequest.builder()
-                    .user(Set.of(jwtSub, subscribedUserResourceId)).build()));
+                    .user(Set.of(subscribedUserResourceId)).build()));
             entity.setContentType(String.valueOf(ContentType.APPLICATION_JSON));
             httpPost.setEntity(entity);
             httpPost.setHeader("Authorization", "Bearer " + authToken);
@@ -202,36 +183,42 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
     /**
      * POJO class representing the micro auth resource check request
      */
-    @Data
     @Builder
+    @Jacksonized
+    @Value
     public static class ResourceCheckRequest {
 
         /**
          * A set of user ids for which relationship needs to be checked.
          */
-        private Set<String> user;
+        Set<String> user;
 
     }
 
     /**
      * POJO class representing the micro auth resource check response
      */
-    @Data
+    @Builder
+    @Jacksonized
+    @Value
     public static class ResourceCheckResponse {
+
         @JsonProperty("user")
-        private List<ResourceIdentifier> userIds;
+        List<ResourceIdentifier> userIds;
 
     }
 
     /**
      * POJO class representing individual node in {@code ResourceCheckResponse}
      */
-    @Data
+    @Builder
+    @Jacksonized
+    @Value
     public static class ResourceIdentifier {
-        private String type;
-        private String identifier;
-        private boolean read;
 
+        String type;
+        String identifier;
+        boolean read;
     }
 
 }

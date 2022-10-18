@@ -1,19 +1,18 @@
 package com.catapult.lds.service;
 
-import java.util.Map;
-
 /**
- * {@code SubscriptionAuthorizationService} provides methods for checking claims available in the lambda request context.
+ * {@code SubscriptionAuthorizationService} provides methods for checking claims available in the authorization context.
  */
 public interface SubscriptionAuthorizationService {
+
     /**
-     * Performs an authorization check by making sure the principal (JWT sub in the request context) can view data attributed
+     * Performs an authorization check by making sure that {@link AuthContext#getSubject()} can view data attributed to the given userId
      *
      * @throws SubscriptionException     if data expected to be in the given request context is not present
      * @throws UnauthorizedUserException if the principal identified by the jwt sub claim does not have access to the data
      *                                   attributed to the given user id.
      * @pre userId != null
-     * @pre requestContext != null
+     * @pre authContext != null
      */
-    void checkAuthorizationForUserResource(String userId, Map<String, Object> requestContext) throws UnauthorizedUserException, SubscriptionException;
+    void checkAuthorizationForUserResource(String userId, AuthContext authContext) throws UnauthorizedUserException, SubscriptionException;
 }

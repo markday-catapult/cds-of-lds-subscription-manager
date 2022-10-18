@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Map;
 
 import static java.util.stream.Collectors.joining;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,13 +30,11 @@ public class SubscriptionAuthorizationServiceImplTest {
         Path path = Paths.get("src/test/resources/authcontext.json");
         String jsonData = Files.lines(path).collect(joining("\n"));
         AuthContext context = mapper.readValue(jsonData, AuthContext.class);
-        Map<String, Object> requestContext = Map.of("catapultsports", mapper.writeValueAsString(context));
 
         CloseableHttpClient httpClientMock = mock(CloseableHttpClient.class);
 
         Path path1 = Paths.get("src/test/resources/microauthresourcecheckresponse.json");
         String jsonData1 = Files.lines(path1).collect(joining("\n"));
-        SubscriptionAuthorizationServiceImpl.ResourceCheckResponse resourceCheckResponse = mapper.readValue(jsonData1, SubscriptionAuthorizationServiceImpl.ResourceCheckResponse.class);
         CloseableHttpResponse closeableHttpResponse = mock(CloseableHttpResponse.class);
         HttpEntity httpEntity = mock(HttpEntity.class);
         StatusLine statusLine = mock(StatusLine.class);
@@ -51,11 +48,10 @@ public class SubscriptionAuthorizationServiceImplTest {
         SubscriptionAuthorizationServiceImpl jwtValidationService = new SubscriptionAuthorizationServiceImpl(httpClientMock, "dummyEndpoint");
 
         //subscriber abd subscriber resource userId are the same
-        jwtValidationService.checkAuthorizationForUserResource("ee8758ec-fe5f-4574-8b71-ba24f30ee672", requestContext);
+        jwtValidationService.checkAuthorizationForUserResource("ee8758ec-fe5f-4574-8b71-ba24f30ee672", context);
 
         //subscriber and subscriber resource userId belongs to the same account
-        jwtValidationService.checkAuthorizationForUserResource("validUserId", requestContext);
-
+        jwtValidationService.checkAuthorizationForUserResource("validUserId", context);
     }
 
 

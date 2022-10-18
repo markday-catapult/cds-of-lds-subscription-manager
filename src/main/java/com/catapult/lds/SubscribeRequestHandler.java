@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
+import com.catapult.lds.service.AuthContext;
 import com.catapult.lds.service.ResourceNameSpace;
 import com.catapult.lds.service.Subscription;
 import com.catapult.lds.service.SubscriptionAuthorizationService;
@@ -127,7 +128,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
             Subscription subscription = new Subscription(connectionId, resources);
 
             // JWT claims validation
-            subscriptionAuthorizationService.checkAuthorizationForUserResource(subscriptionRequest.getUserId(), event.getRequestContext().getAuthorizer());
+            subscriptionAuthorizationService.checkAuthorizationForUserResource(subscriptionRequest.getUserId(), AuthContext.extractContext(event.getRequestContext().getAuthorizer()));
 
             // Add the subscription
             subscriptionCacheService.addSubscription(subscription);
