@@ -102,7 +102,7 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
         assert (userId != null);
         assert (requestContext != null);
 
-        //TODO need to throw SubscriptionException when requestContext doesnot exist.
+        //TODO need to throw SubscriptionException when requestContext doesn't exist.
         if (requestContext.get(CONTEXT_CATAPULT_SPORTS) != null) {
 
             final AuthContext authContext;
@@ -209,7 +209,7 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
         /**
          * A set of userId's for which relationship needs to be checked.
          */
-        private Set<String> user = null;
+        private Set<String> user;
 
     }
 
