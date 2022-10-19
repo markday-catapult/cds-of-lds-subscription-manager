@@ -9,7 +9,6 @@ import io.lettuce.core.api.sync.RedisCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -124,6 +123,12 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         assert connectionId != null;
 
         this.logger.debug("creating connection '{}' ", connectionId);
+        Connection newConnection = Connection.builder()
+                .id(connectionId)
+                .subscriberId(subscriberId)
+                .build();
+
+        this.logger.debug("persisting connection '{}' ", connectionId);
 
         RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
@@ -137,11 +142,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                     connectionId));
         }
 
-        Map<String, String> values = Map.of(
-                CREATED_AT, "" + System.currentTimeMillis(),
-                SUBSCRIBER_ID, subscriberId);
-
-        syncCommands.hset(connectionKey, values);
+        syncCommands.setnx(connectionKey, newConnection.toJson());
     }
 
     /**
@@ -150,6 +151,25 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     @Override
     public Set<String> getAllConnectionIds() {
         return this.redisClient.sync().smembers(CONNECTIONS_KEY);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Connection getConnection(String connectionId) throws SubscriptionException {
+
+        RedisCommands<String, String> syncCommands = this.redisClient.sync();
+
+        String connectionKey = this.connectionIdToKey(connectionId);
+
+        String serializedConnection = syncCommands.get(connectionKey);
+
+        if (serializedConnection == null) {
+            throw new SubscriptionException(String.format("Connection '%s' not found in cache", connectionKey));
+        }
+
+        return Connection.fromJson(serializedConnection);
     }
 
     /**
@@ -169,9 +189,11 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                     connectionId));
         }
 
-        Set<String> remainingSubscriptionIds = syncCommands.hkeys(connectionKey)
+        Connection connection = Connection.fromJson(syncCommands.get(connectionKey));
+
+        Set<String> remainingSubscriptionIds = connection.getSubscriptions()
                 .stream()
-                .filter(k -> !CREATED_AT.equals(k) && !SUBSCRIBER_ID.equals(k))
+                .map(s -> s.getId())
                 .collect(Collectors.toSet());
 
         this.logger.debug("removing all remaining subscriptions {} ", remainingSubscriptionIds);
@@ -210,26 +232,25 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         RedisCommands<String, String> syncCommands = this.redisClient.sync();
 
         String connectionId = subscription.getConnectionId();
-        String subscriptionId = subscription.getId();
         String connectionKey = this.connectionIdToKey(connectionId);
 
-        this.logger.debug("creating subscription '{}' for connection '{}'", subscriptionId, connectionId);
+        this.logger.debug("creating subscription '{}' for connection '{}'", subscription.getConnectionId(), connectionId);
 
         if (syncCommands.exists(connectionKey) == 0) {
             throw new SubscriptionException(String.format("Connection '%s' does not exist in the cache.",
                     connectionId));
         }
-        if (syncCommands.hexists(connectionKey, subscriptionId)) {
+
+        Connection connection = this.getConnection(connectionId);
+
+        if (connection.findSubscription(subscription.getId()) != null) {
             throw new SubscriptionException(String.format("subscription '%s' for connection `%s` already exists in " +
-                    "the cache.", subscriptionId, connectionId));
+                    "the cache.", subscription.getId(), connectionId));
         }
 
         // add subscription to connection hash
-        try {
-            syncCommands.hset(connectionKey, subscriptionId, objectMapper.writeValueAsString(subscription));
-        } catch (JsonProcessingException e) {
-            throw new SubscriptionException("Could not serialize subscription", e);
-        }
+        connection.addSubscription(subscription);
+        syncCommands.set(connectionKey, connection.toJson());
 
         // DENORMALIZED CACHE UPDATE
 
@@ -271,14 +292,15 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         this.logger.debug("cancelling subscription '{}' for connection '{}'", subscriptionId, connectionId);
 
-        // adjust denormalized cache here
-
-        Subscription subscription = this.getSubscription(connectionId, subscriptionId);
+        Connection connection = this.getConnection(connectionId);
+        Subscription subscription = connection.findSubscription(subscriptionId);
 
         // no work to do if subscription cannot be found
         if (subscription == null) {
             return;
         }
+
+        // adjust denormalized cache here
 
         Set<String> resources = subscription.getResources();
 
@@ -328,37 +350,26 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
             if (resourcesToModify.size() > 0) {
                 syncCommands.mset(resourcesToModify);
             }
-
         }
 
-        syncCommands.hdel(connectionKey, subscriptionId);
+        connection.removeSubscription(subscriptionId);
+        syncCommands.set(connectionKey, connection.toJson());
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Collection<Subscription> getSubscriptions(String connectionId) throws SubscriptionException {
-        assert connectionId != null;
-
-        RedisCommands<String, String> syncCommands = this.redisClient.sync();
-
-        String connectionKey = this.connectionIdToKey(connectionId);
-
-        Map<String, String> subscriptionJsonBySubscriptionId = syncCommands.hgetall(connectionKey);
-        if (subscriptionJsonBySubscriptionId.isEmpty()) {
-            throw new SubscriptionException(String.format("Connection '%s' does not exist in the cache", connectionId));
-        }
-
-        try {
-            return subscriptionJsonBySubscriptionId.entrySet()
-                    .stream()
-                    .filter(e -> !CREATED_AT.equals(e.getKey()) && !SUBSCRIBER_ID.equals(e.getKey()))
-                    .collect(Collectors.mapping(e -> subscriptionJsonToSubscription(e.getValue()), Collectors.toSet()));
-        } catch (Throwable t) {
-            throw new SubscriptionException(String.format("Error deserializing subscription: %s", t.getMessage()));
-        }
-    }
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    public Collection<Subscription> getSubscriptions(String connectionId) throws SubscriptionException {
+//        assert connectionId != null;
+//
+//        RedisCommands<String, String> syncCommands = this.redisClient.sync();
+//
+//        String connectionKey = this.connectionIdToKey(connectionId);
+//        Connection connection = this.getConnection(connectionKey);
+//
+//        return connection.getSubscriptions();
+//    }
 
     /**
      * Deserializes the given subscription json.
@@ -373,29 +384,29 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Subscription getSubscription(String connectionId, String subscriptionId) throws SubscriptionException {
-        assert connectionId != null;
-        assert subscriptionId != null;
-
-        RedisCommands<String, String> syncCommands = this.redisClient.sync();
-
-        final String connectionKey = this.connectionIdToKey(connectionId);
-        final String subscriptionJson = syncCommands.hget(connectionKey, subscriptionId);
-
-        if (subscriptionJson == null) {
-            return null;
-        }
-
-        try {
-            return objectMapper.readValue(subscriptionJson, Subscription.class);
-        } catch (JsonProcessingException e) {
-            throw new SubscriptionException("Could not deserialize subscription: " + subscriptionJson, e);
-        }
-    }
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    public Subscription getSubscription(String connectionId, String subscriptionId) throws SubscriptionException {
+//        assert connectionId != null;
+//        assert subscriptionId != null;
+//
+//        RedisCommands<String, String> syncCommands = this.redisClient.sync();
+//
+//        final String connectionKey = this.connectionIdToKey(connectionId);
+//        final String subscriptionJson = syncCommands.hget(connectionKey, subscriptionId);
+//
+//        if (subscriptionJson == null) {
+//            return null;
+//        }
+//
+//        try {
+//            return objectMapper.readValue(subscriptionJson, Subscription.class);
+//        } catch (JsonProcessingException e) {
+//            throw new SubscriptionException("Could not deserialize subscription: " + subscriptionJson, e);
+//        }
+//    }
 
     /**
      * {@inheritDoc}

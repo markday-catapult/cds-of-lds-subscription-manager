@@ -20,7 +20,7 @@ of [AWS Lambdas](https://docs.aws.amazon.com/lambda/index.html) and accessed via
 
 ### Data structures
 
-The subscription manager stores two conceptually distinct caches in a single shared redis logical database - the
+The subscription manager stores two conceptually distinct caches in a single shared **redis** logical database - the
 **Normalized Cache** which is designed to be accessed via a connection key, and the **Denormalized Cache** which is
 designed to be accessed by a resource ID. Both caches use a namespacing technique to avoid possible key collisions
 between the two. Both caches are updated during subscribe/unsubscribe actions.
@@ -29,34 +29,31 @@ between the two. Both caches are updated during subscribe/unsubscribe actions.
 
 Redis key Namespace: `$connection-id`
 
-The normalized cache utilizes a [redis hash](https://redis.io/docs/manual/data-types/#hashes) data type to persist
-information about a websocket's subscriptions. Valid key/value pairs are in this hash are as follows:
+The normalized cache utilizes a [redis string](https://redis.io/docs/data-types/strings/) data type to persist
+information about a websocket's subscriptions. The value is a stringified json object with the following keys:
 
-| Key                 | Required  | Value                                                 |
-|---------------------|-----------|-------------------------------------------------------|
-| `created_at`        | Yes       | Stringified timestamp in ms                           |
-| `subscriber_id`     | Yes       | The user key of the subscriber                        |
-| `<subscription id>` | Yes       | Stringified Subscription JSON Object as defined below |
+| Key             | Required | Value                                                        |
+|-----------------|----------|--------------------------------------------------------------|
+| `id`            | Yes      | The connection ID                                            |
+| `createdAt`     | Yes      | Stringified timestamp in ms                                  |
+| `subscriberId`  | Yes      | The user key of the subscriber (the owner of the connection) |
+| `subscriptions` | Yes      | A list of Subscription objects as defined below              |
 
 Subscription Data Object:
 
-| Key           | Required | Value                                                                                                                                                |
-|---------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `id`          | Yes      | Subscription id - automatically generated                                                                                                            |
-| `resources`   | Yes      | Stringified JSON array with each value being a key into the denormalized cache(see the namespacing description for those keys)                       |
-| `sample_rate` | No       | If present, the sample rate in Hz of the data subscribed to. If not present, no downsampling is applied to data. Valid values for this are 1,2,5,10. | 
+| Key            | Required | Value                                                                                                                                                |
+|----------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `id`           | Yes      | The subscription id                                                                                                                                  |
+| `connectionId` | Yes      | The id of the connection that the subscription is associated with                                                                                    | 
+| `resources`    | Yes      | An array where each value is a key into the denormalized cache (see the namespacing description for those keys)                                      |
+| `sample_rate`  | No       | If present, the sample rate in Hz of the data subscribed to. If not present, no downsampling is applied to data. Valid values for this are 1,2,5,10. | 
 
 Example:
 
 ```json
 
 {
-  "$connection-id:<con-id-1>": {
-    "created_at": "1658858886356",
-    "user_key": "user-key-uuid",
-    "<SUBSCRIPTION_ID_1>": "{\"sample_rate\":2,\"resources\":[\"ts:device:dev-id-1\",\"ts:device:dev-id-2\"]}",
-    "<SUBSCRIPTION_ID_2>": "{\"sample_rate\":5,\"resources\":[\"ts:athlete:ath-id-1\",\"ts:user:user-id-1\"]}"
-  }
+  "$connection-id-CON1": "{\"id\":\"CON1\",\"createdAt\":1666211855095,\"subscriberId\":\"subscriber-id\",\"subscriptions\":[{\"id\":\"5f369f08-db7e-4e48-91aa-dfd0cd8a6b85\",\"connectionId\":\"CON1\",\"resources\":[\"athlete-id-2\",\"athlete-id-1\"],\"sampleRate\":null},{\"id\":\"12196176-f32b-40ac-a1d6-efe94cfe8e8e\",\"connectionId\":\"CON1\",\"resources\":[\"device-id-1\",\"athlete-id-1\",\"device-id-2\"],\"sampleRate\":1},{\"id\":\"4010523e-3e6f-493e-8757-b5504a098d4f\",\"connectionId\":\"CON1\",\"resources\":[\"device-id-1\",\"athlete-id-1\"],\"sampleRate\":2}]}"
 }
 
 ```
@@ -79,7 +76,7 @@ listed order. All three parts must be present.
 
 - Data Class
     - `ts` - time series
-    - `su` - summary data
+    - `ad` - aggregate data
 - Resource Type
     - `user`
     - `device`

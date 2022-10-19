@@ -116,13 +116,13 @@ public class RedisSubscriptionCacheServiceTest {
                 deviceResource2);
 
         // asking for subscriptions for a non-existent connection should throw an exception
-        Assert.assertThrows(SubscriptionException.class, () -> cacheService.getSubscriptions(connectionId1));
+        Assert.assertThrows(SubscriptionException.class, () -> cacheService.getConnection(connectionId1));
 
         // create a connection
         cacheService.createConnection(connectionId1, "subscriber-id");
 
         // no subscriptions exist for this connection yet
-        Assert.assertEquals(cacheService.getSubscriptions(connectionId1).size(), 0);
+        Assert.assertEquals(cacheService.getConnection(connectionId1).getSubscriptions().size(), 0);
 
         Subscription subscription1 = Subscription.builder()
                 .connectionId(connectionId1)
@@ -144,7 +144,7 @@ public class RedisSubscriptionCacheServiceTest {
         cacheService.addSubscription(subscription3);
 
         // 3 subscriptions exist for this connection
-        Assert.assertEquals(cacheService.getSubscriptions(connectionId1).size(), 3);
+        Assert.assertEquals(cacheService.getConnection(connectionId1).getSubscriptions().size(), 3);
 
         // all 4 resources have the correct connections associated with them
         Assert.assertFalse(cacheService.getDenormalizedConnectionsForResourceIds(allFourResourceIds).get(deviceResource1).getSubscriptionIds(connectionId1).isEmpty());
@@ -156,7 +156,7 @@ public class RedisSubscriptionCacheServiceTest {
         cacheService.cancelSubscription(subscription2.getConnectionId(), subscription2.getId());
 
         // 2 subscriptions exist for this connection
-        Assert.assertEquals(cacheService.getSubscriptions(connectionId1).size(), 2);
+        Assert.assertEquals(cacheService.getConnection(connectionId1).getSubscriptions().size(), 2);
 
         // 'deviceResource2' no longer has a connection associates with it resources have connections associated with
         // them

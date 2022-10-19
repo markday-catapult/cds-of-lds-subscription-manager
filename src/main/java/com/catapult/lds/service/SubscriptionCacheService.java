@@ -1,6 +1,5 @@
 package com.catapult.lds.service;
 
-import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -16,7 +15,7 @@ public interface SubscriptionCacheService {
     boolean isConnected();
 
     /**
-     * Create an entry associated with the given connection id and subscriber id in the cache.
+     * Create a new entry associated with the given connection id and subscriber id in the cache.
      *
      * @throws SubscriptionException if the given connection id already exists in the cache.
      * @pre connectionId != null
@@ -32,9 +31,20 @@ public interface SubscriptionCacheService {
     Set<String> getAllConnectionIds();
 
     /**
-     * Create an entry associated with the given connection id in the cache.
+     * Returns the connection associated with the given connection id.
      *
      * @throws SubscriptionException if the given connection id does not exist in the cache.
+     *
+     * @pre connectionId != null
+     */
+    Connection getConnection(String connectionId) throws SubscriptionException;
+
+    /**
+     * Removes all subscriptions associated with this connection from the deserialized cache, and removes the entry
+     * associated with this connection from the normalized cache.
+     *
+     * @throws SubscriptionException if the given connection id does not exist in the cache.
+     *
      * @pre connectionId != null
      */
     void closeConnection(String connectionId) throws SubscriptionException;
@@ -57,24 +67,24 @@ public interface SubscriptionCacheService {
      */
     void cancelSubscription(String connectionId, String subscriptionId) throws SubscriptionException;
 
-    /**
-     * Returns a collection of subscriptions associated with the given connection id.
-     *
-     * @throws SubscriptionException if a connection with the given connection id does not exist in the cache.
-     * @pre connectionId != null
-     * @post return != null
-     */
-    Collection<Subscription> getSubscriptions(String connectionId) throws SubscriptionException;
-
-    /**
-     * Returns the subscription associated with the given connection id and subscription id, or null if no such
-     * subscription exists.
-     *
-     * @throws SubscriptionException if an issue occurred retrieving the subscription.
-     *
-     * @pre connectionId != null
-     */
-    Subscription getSubscription(String connectionId, String subscriptionId) throws SubscriptionException;
+//    /**
+//     * Returns a collection of subscriptions associated with the given connection id.
+//     *
+//     * @throws SubscriptionException if a connection with the given connection id does not exist in the cache.
+//     * @pre connectionId != null
+//     * @post return != null
+//     */
+//    Collection<Subscription> getSubscriptions(String connectionId) throws SubscriptionException;
+//
+//    /**
+//     * Returns the subscription associated with the given connection id and subscription id, or null if no such
+//     * subscription exists.
+//     *
+//     * @throws SubscriptionException if an issue occurred retrieving the subscription.
+//     *
+//     * @pre connectionId != null
+//     */
+//    Subscription getSubscription(String connectionId, String subscriptionId) throws SubscriptionException;
 
     /**
      * Returns a map of {@code denormalized cache values} associated with the given criteria.  Any resource ids that did

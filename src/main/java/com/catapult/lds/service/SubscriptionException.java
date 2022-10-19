@@ -29,4 +29,15 @@ public class SubscriptionException extends Exception {
         assert throwable != null;
     }
 
+    /**
+     * Creates a {@code SubscriptionException} with the given throwable.
+     *
+     * @pre throwable != null
+     */
+    public SubscriptionException(Throwable throwable) {
+        super(throwable);
+
+        assert throwable != null;
+    }
+
 }
