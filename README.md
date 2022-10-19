@@ -32,20 +32,30 @@ Redis key Namespace: `$connection-id`
 The normalized cache utilizes a [redis hash](https://redis.io/docs/manual/data-types/#hashes) data type to persist
 information about a websocket's subscriptions. Valid key/value pairs are in this hash are as follows:
 
-| Key                | Value                                                                                                                               |
-|--------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| `created-at`       | Stringified timestamp in ms                                                                                                         |
-| `<subscription id>` | Stringified JSON array with each value being a key into the denormalized cache<br/>(see the namespacing description for those keys) |
+| Key                 | Required  | Value                                                 |
+|---------------------|-----------|-------------------------------------------------------|
+| `created_at`        | Yes       | Stringified timestamp in ms                           |
+| `subscriber_id`     | Yes       | The user key of the subscriber                        |
+| `<subscription id>` | Yes       | Stringified Subscription JSON Object as defined below |
+
+Subscription Data Object:
+
+| Key           | Required | Value                                                                                                                                                |
+|---------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `id`          | Yes      | Subscription id - automatically generated                                                                                                            |
+| `resources`   | Yes      | Stringified JSON array with each value being a key into the denormalized cache(see the namespacing description for those keys)                       |
+| `sample_rate` | No       | If present, the sample rate in Hz of the data subscribed to. If not present, no downsampling is applied to data. Valid values for this are 1,2,5,10. | 
 
 Example:
 
 ```json
 
 {
-  "$connection-id:connection-id-1": {
+  "$connection-id:<con-id-1>": {
     "created_at": "1658858886356",
-    "<SUBSCRIPTION_ID_1>": "[\"ts:device:dev-id-1\",\"ts:device:dev-id-2\"]",
-    "<SUBSCRIPTION_ID_2>": "[\"ts:athlete:ath-id-1\",\"ts:user:user-id-1\"]"
+    "user_key": "user-key-uuid",
+    "<SUBSCRIPTION_ID_1>": "{\"sample_rate\":2,\"resources\":[\"ts:device:dev-id-1\",\"ts:device:dev-id-2\"]}",
+    "<SUBSCRIPTION_ID_2>": "{\"sample_rate\":5,\"resources\":[\"ts:athlete:ath-id-1\",\"ts:user:user-id-1\"]}"
   }
 }
 

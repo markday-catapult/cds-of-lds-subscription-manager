@@ -124,7 +124,13 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
         try {
             Set<String> resources = subscriptionRequest.getNamespacedResources();
 
-            Subscription subscription = new Subscription(connectionId, resources);
+            Subscription subscription = Subscription.builder()
+                    .connectionId(connectionId)
+                    .resources(resources)
+                    .sampleRate(subscriptionRequest.sampleRate)
+                    .build();
+
+            subscription.getResources();
 
             // JWT claims validation
             subscriptionAuthorizationService.checkAuthorizationForUserResource(subscriptionRequest.getUserId(),
@@ -165,6 +171,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
         private String dataClass;
         private String requestId;
         private String userId;
+        private Integer sampleRate;
         private SubscriptionRequestResources resources;
 
         /**

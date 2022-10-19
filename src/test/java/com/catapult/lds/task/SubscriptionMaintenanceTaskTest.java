@@ -18,10 +18,10 @@ import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import org.testng.collections.Sets;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -54,9 +54,12 @@ public class SubscriptionMaintenanceTaskTest {
         redisClient.sync().set("ad:user:66b9655c-25a9-4ef5-98c2-87a368675309-001-001", "[{\"connectionId" +
                 "\":\"YEPpBd35CYcCHJg=\",\"subscriptionIds\":[\"55869dea-9b5f-47eb-a5ce-6258df713c25\"]},{\"connectionId\":\"YEPpHfJXiYcCJgQ=\",\"subscriptionIds\":[\"89382d09-6c35-47a7-b6aa-7cd38d5a19ff\"]},{\"connectionId\":\"YEPpMcMnCYcCGsQ=\",\"subscriptionIds\":[\"646d1a55-7edb-4f5c-8c1b-b62fa1ed379a\"]},{\"connectionId\":\"YEPpTeCPiYcCEFQ=\",\"subscriptionIds\":[\"2da988cc-7d07-4efe-8721-12ecf6a58e0c\"]}]");
         SubscriptionCacheService cacheService = RedisSubscriptionCacheService.instance;
-        cacheService.createConnection("con-id-1");
-        cacheService.createConnection("con-id-2");
-        cacheService.addSubscription(new Subscription("con-id-1", Sets.newHashSet("athlete-id-1")));
+        cacheService.createConnection("con-id-1", "sub-id");
+        cacheService.createConnection("con-id-2", "sub-id");
+        cacheService.addSubscription(Subscription.builder()
+                .connectionId("con-id-1")
+                .resources(Set.of("athlete-id-1"))
+                .build());
     }
 
     @AfterMethod

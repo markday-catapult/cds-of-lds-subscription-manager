@@ -16,12 +16,13 @@ public interface SubscriptionCacheService {
     boolean isConnected();
 
     /**
-     * Create an entry associated with the given connection id in the cache.
+     * Create an entry associated with the given connection id and subscriber id in the cache.
      *
      * @throws SubscriptionException if the given connection id already exists in the cache.
      * @pre connectionId != null
+     * @pre subscriberId != null
      */
-    void createConnection(String connectionId) throws SubscriptionException;
+    void createConnection(String connectionId, String subscriberId) throws SubscriptionException;
 
     /**
      * Returns the set of all open connection ids.
@@ -69,9 +70,11 @@ public interface SubscriptionCacheService {
      * Returns the subscription associated with the given connection id and subscription id, or null if no such
      * subscription exists.
      *
+     * @throws SubscriptionException if an issue occurred retrieving the subscription.
+     *
      * @pre connectionId != null
      */
-    Subscription getSubscription(String connectionId, String subscriptionId);
+    Subscription getSubscription(String connectionId, String subscriptionId) throws SubscriptionException;
 
     /**
      * Returns a map of {@code denormalized cache values} associated with the given criteria.  Any resource ids that did
@@ -101,6 +104,6 @@ public interface SubscriptionCacheService {
      *
      * @pre deadConnectionFilter != null
      */
-    public void cleanCache(Function<Set<String>, Set<String>> deadConnectionFilter);
+    void cleanCache(Function<Set<String>, Set<String>> deadConnectionFilter);
 }
 
