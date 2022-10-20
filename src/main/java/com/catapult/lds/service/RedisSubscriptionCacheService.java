@@ -108,6 +108,19 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     }
 
     /**
+     * Deserializes the given subscription json.
+     *
+     * @throws RuntimeException if there was an issue deserializing the subscription json
+     */
+    private static Subscription subscriptionJsonToSubscription(String subscriptionJson) {
+        try {
+            return objectMapper.readValue(subscriptionJson, Subscription.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -259,7 +272,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                 this.getDenormalizedConnectionsForResourceIds(subscription.getResources());
 
         // add the subscription to each of the denormalized cache values:
-        connectionsByResourceId.values().forEach(v -> v.addSubscription(connectionId, subscription.getId()));
+        connectionsByResourceId.values().forEach(v -> v.addSubscription(subscription));
 
         // store the updated denormalized cache
         Map<String, String> request = connectionsByResourceId
@@ -267,7 +280,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                 .stream()
                 .collect(Collectors.toMap(
                         kv -> kv.getKey(),
-                        kv -> kv.getValue().getSerializedConnectionList())
+                        kv -> kv.getValue().toJson())
                 );
 
         // if there are name-spaced resources that were not initially associated with a connection, add them now.
@@ -277,6 +290,21 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         this.logger.debug("sending request to cache: {}", request);
     }
+
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    public Collection<Subscription> getSubscriptions(String connectionId) throws SubscriptionException {
+//        assert connectionId != null;
+//
+//        RedisCommands<String, String> syncCommands = this.redisClient.sync();
+//
+//        String connectionKey = this.connectionIdToKey(connectionId);
+//        Connection connection = this.getConnection(connectionKey);
+//
+//        return connection.getSubscriptions();
+//    }
 
     /**
      * {@inheritDoc}
@@ -310,7 +338,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                             .stream()
                             .collect(Collectors.toMap(
                                     kv -> kv.getKey(),
-                                    kv -> DenormalizedCacheValue.deserializeFromJson(kv.getKey(), kv.getValue())));
+                                    kv -> DenormalizedCacheValue.fromJson(kv.getValue())));
 
             this.logger.trace("denormalizedCacheValuesByResourceId: {}", denormalizedCacheValuesByResourceId);
 
@@ -335,7 +363,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                             .filter(es -> !resourcesToDelete.contains(es.getKey()))
                             .collect(Collectors.toMap(
                                     es -> es.getKey(),
-                                    es -> es.getValue().getSerializedConnectionList()));
+                                    es -> es.getValue().toJson()));
 
             // remove denormalized connections from a device if the list of subscriptions is empty
 
@@ -354,34 +382,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         connection.removeSubscription(subscriptionId);
         syncCommands.set(connectionKey, connection.toJson());
-    }
-
-//    /**
-//     * {@inheritDoc}
-//     */
-//    @Override
-//    public Collection<Subscription> getSubscriptions(String connectionId) throws SubscriptionException {
-//        assert connectionId != null;
-//
-//        RedisCommands<String, String> syncCommands = this.redisClient.sync();
-//
-//        String connectionKey = this.connectionIdToKey(connectionId);
-//        Connection connection = this.getConnection(connectionKey);
-//
-//        return connection.getSubscriptions();
-//    }
-
-    /**
-     * Deserializes the given subscription json.
-     *
-     * @throws RuntimeException if there was an issue deserializing the subscription json
-     */
-    private static Subscription subscriptionJsonToSubscription(String subscriptionJson) {
-        try {
-            return objectMapper.readValue(subscriptionJson, Subscription.class);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
     }
 
 //    /**
@@ -424,8 +424,9 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                         .collect(Collectors.toMap(
                                 kv -> kv.getKey(),
                                 kv -> kv.isEmpty() ?
-                                        DenormalizedCacheValue.deserializeFromJson(kv.getKey(), "[]") :
-                                        DenormalizedCacheValue.deserializeFromJson(kv.getKey(), kv.getValue()))
+                                        DenormalizedCacheValue.fromJson(String.format("{\"key\":\"%s\",\"connections\":[]}",
+                                                kv.getKey())) :
+                                        DenormalizedCacheValue.fromJson(kv.getValue()))
                         );
 
         assert resourceIds.size() == connectionsByResourceId.size();
@@ -488,7 +489,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                         .stream()
                         .collect(Collectors.toMap(
                                 es -> es.getKey(),
-                                es -> es.getValue().getSerializedConnectionList()));
+                                es -> es.getValue().toJson()));
 
         // remove denormalized connections from a device if the list of subscriptions is empty
         this.logger.debug("modifiedResources: {} " + resourcesToModify);

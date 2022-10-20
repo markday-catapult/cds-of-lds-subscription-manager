@@ -39,7 +39,7 @@ information about a websocket's subscriptions. The value is a stringified json o
 | `subscriberId`  | Yes      | The user key of the subscriber (the owner of the connection) |
 | `subscriptions` | Yes      | A list of Subscription objects as defined below              |
 
-Subscription Data Object:
+Subscription object:
 
 | Key            | Required | Value                                                                                                                                                |
 |----------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -53,21 +53,97 @@ Example:
 ```json
 
 {
-  "$connection-id-CON1": "{\"id\":\"CON1\",\"createdAt\":1666211855095,\"subscriberId\":\"subscriber-id\",\"subscriptions\":[{\"id\":\"5f369f08-db7e-4e48-91aa-dfd0cd8a6b85\",\"connectionId\":\"CON1\",\"resources\":[\"athlete-id-2\",\"athlete-id-1\"],\"sampleRate\":null},{\"id\":\"12196176-f32b-40ac-a1d6-efe94cfe8e8e\",\"connectionId\":\"CON1\",\"resources\":[\"device-id-1\",\"athlete-id-1\",\"device-id-2\"],\"sampleRate\":1},{\"id\":\"4010523e-3e6f-493e-8757-b5504a098d4f\",\"connectionId\":\"CON1\",\"resources\":[\"device-id-1\",\"athlete-id-1\"],\"sampleRate\":2}]}"
+  "id": "CON1",
+  "createdAt": 1666211855095,
+  "subscriberId": "subscriber-id",
+  "subscriptions": [
+    {
+      "id": "5f369f08-db7e-4e48-91aa-dfd0cd8a6b85",
+      "connectionId": "CON1",
+      "resources": [
+        "athlete-id-2",
+        "athlete-id-1"
+      ],
+      "sampleRate": null
+    },
+    {
+      "id": "12196176-f32b-40ac-a1d6-efe94cfe8e8e",
+      "connectionId": "CON1",
+      "resources": [
+        "device-id-1",
+        "athlete-id-1",
+        "device-id-2"
+      ],
+      "sampleRate": 1
+    },
+    {
+      "id": "4010523e-3e6f-493e-8757-b5504a098d4f",
+      "connectionId": "CON1",
+      "resources": [
+        "device-id-1",
+        "athlete-id-1"
+      ],
+      "sampleRate": 2
+    }
+  ]
 }
-
 ```
 
 #### The Denormalized Cache
 
-The denormalized cache consists of key/value pairs of strings with the key being a namespaced resource id, and the value
-being a stringified json list of objects. Each object contains two key/value pairs
+The denormalized cache utilizes a [redis string](https://redis.io/docs/data-types/strings/) data type to persist the
+information needed by the demuxer to efficiently route messages to connections. The key is the resource id and the
+value is a stringified JSON list of Denormalized Cache Connection objects.
+
+| Key             | Required | Value                                                        |
+|-----------------|----------|--------------------------------------------------------------|
+| `id`            | Yes      | The id of the connection that the resource should be sent to | 
+| `subscriptions` | Yes      | An array where each value is a Simplified Subscription       |  
+
+Simplified Subscription Object
+
+| Key          | Required | Value                       |
+|--------------|----------|-----------------------------|
+| `id`         | Yes      | The id of the subscription  | 
+| `sampleRate` | Yes      | The sample rare of the data |  
+
+Example:
 
 ```json 
 {
-  "connectionId": "connection-id-abc",
-  "subscriptionIds": ["subscription-id-123","subscription-id-456"]
-}
+
+[
+  {
+    "connectionId": "connection-id-abc",
+    "subscriptions": [
+      {
+        "id": "subscription-id-123",
+        "sampleRate": 5
+      },
+      {
+        "id": "subscription-id-123",
+        "sampleRate": 2
+      }
+    ]
+  },
+  {
+    "connectionId": "connection-id-def",
+    "subscriptionIds": [
+      {
+        "id": "subscription-id-777"
+      }
+    ]
+  },
+  {
+    "connectionId": "connection-id-ghi",
+    "subscriptionIds": [
+      {
+        "id": "subscription-id-123",
+        "sampleRate": 1
+      }
+    ]
+  }
+]
 ```
 
 The Resource Namespace consists of three parts - a data class (used to disambiguate a resource that may appear in

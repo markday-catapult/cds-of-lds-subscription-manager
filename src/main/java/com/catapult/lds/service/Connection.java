@@ -23,39 +23,6 @@ public class Connection {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Returns the json serialized form of this connection
-     *
-     * @throws SubscriptionException if an issue arises serializing this connection to json.
-     *
-     * @post return != null
-     */
-    public String toJson() throws SubscriptionException {
-        try {
-            return objectMapper.writeValueAsString(this);
-        } catch (JsonProcessingException e) {
-            throw new SubscriptionException(e);
-        }
-    }
-
-    /**
-     * Returns a new {@code Connection} from the given json string.
-     *
-     * @throws SubscriptionException if an issue arises deserializing the given JSON
-     *
-     * @pre jsonString != null
-     * @post return != null
-     */
-    public static Connection fromJson(String jsonString) throws SubscriptionException {
-        assert jsonString != null;
-
-        try {
-            return objectMapper.readValue(jsonString, Connection.class);
-        } catch (JsonProcessingException e) {
-            throw new SubscriptionException(e);
-        }
-    }
-
-    /**
      * The id of this connection.
      *
      * @invariant id != null
@@ -88,6 +55,37 @@ public class Connection {
     @NonNull
     @Builder.Default
     private Set<Subscription> subscriptions = new HashSet<>();
+
+    /**
+     * Returns a new {@code Connection} from the given json string.
+     *
+     * @throws SubscriptionException if an issue arises deserializing the given JSON
+     * @pre jsonString != null
+     * @post return != null
+     */
+    public static Connection fromJson(String jsonString) throws SubscriptionException {
+        assert jsonString != null;
+
+        try {
+            return objectMapper.readValue(jsonString, Connection.class);
+        } catch (JsonProcessingException e) {
+            throw new SubscriptionException(e);
+        }
+    }
+
+    /**
+     * Returns the json serialized form of this connection
+     *
+     * @throws SubscriptionException if an issue arises serializing this connection to json.
+     * @post return != null
+     */
+    public String toJson() throws SubscriptionException {
+        try {
+            return objectMapper.writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            throw new SubscriptionException(e);
+        }
+    }
 
     /**
      * Associates the given subscription with this connection.

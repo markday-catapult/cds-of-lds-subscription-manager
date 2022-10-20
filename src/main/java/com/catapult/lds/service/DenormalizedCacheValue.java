@@ -1,11 +1,9 @@
 package com.catapult.lds.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Value;
@@ -13,8 +11,6 @@ import lombok.extern.jackson.Jacksonized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -25,7 +21,9 @@ import java.util.stream.Collectors;
 /**
  * {@code DenormalizedCacheValue} is a deserialized representation of a value in the denormalized cache.
  */
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Value
+@Jacksonized
+@Builder
 public class DenormalizedCacheValue {
 
     /**
@@ -43,67 +41,67 @@ public class DenormalizedCacheValue {
      *
      * @invariant key != null
      */
-    private final String resourceKey;
+    @NonNull
+    private final String key;
 
     /**
      * The set of connections and their subscriptions associated with the resource key
      *
      * @invariant connectionSubscriptions != null
      */
-    private final Collection<ConnectionSubscriptions> connectionSubscriptions;
+    @NonNull
+    @JsonProperty("connections")
+    private final Set<DenormalizedCacheConnection> denormalizedCacheConnections;
 
-    /**
-     * Instantiates a new {@code DenormalizedCacheValue} from the given key and connection list json string.
-     *
-     * @pre key != null
-     * @pre jsonArrayString != null
-     * @post return != null
-     */
-    public static DenormalizedCacheValue deserializeFromJson(String key, String connectionListJson) {
-        assert key != null;
-        assert connectionListJson != null;
+    public static DenormalizedCacheValue fromJson(String jsonString) {
+        assert jsonString != null;
 
         try {
-            Collection<DenormalizedCacheValue.ConnectionSubscriptions> cs = objectMapper.readValue(connectionListJson,
-                    new TypeReference<Collection<ConnectionSubscriptions>>() {
-                    });
-            return new DenormalizedCacheValue(key, cs);
+            return objectMapper.readValue(jsonString, DenormalizedCacheValue.class);
         } catch (JsonProcessingException e) {
-            throw new AssertionError(e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
     /**
-     * Returns a json serialized version of the connection list.
+     * Returns the json serialized form of this denormalized cache value
      *
+     * @throws SubscriptionException if an issue arises serializing this denormalized cache value to json.
      * @post return != null
      */
-    public String getSerializedConnectionList() {
+    public String toJson() {
         try {
-            return objectMapper.writeValueAsString(this.connectionSubscriptions);
+            return objectMapper.writeValueAsString(this);
         } catch (JsonProcessingException e) {
-            throw new AssertionError(e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
     /**
-     * Associates the given subscription id to the given connection id in this cache value
+     * Adds the given subscription to appropriate connection in this cache value
      *
-     * @pre connectionId != null
-     * @pre subscriptionId != null
+     * @pre subscription != null
      */
-    public void addSubscription(String connectionId, String subscriptionId) {
-        assert connectionId != null;
-        assert subscriptionId != null;
+    public void addSubscription(Subscription subscription) {
+        assert subscription != null;
 
-        this.connectionSubscriptions
+        SimplifiedSubscription simplifiedSubscription = SimplifiedSubscription.builder()
+                .id(subscription.getId())
+                .sampleRate(subscription.getSampleRate())
+                .build();
+
+        this.denormalizedCacheConnections
                 .stream()
-                .filter(c -> c.connectionId.equals(connectionId))
+                .filter(c -> c.getId().equals(subscription.getConnectionId()))
                 .findFirst()
                 .ifPresentOrElse(
-                        c -> c.subscriptionIds.add(subscriptionId),
-                        () -> this.connectionSubscriptions.add(new ConnectionSubscriptions(connectionId,
-                                new HashSet<>(Arrays.asList(subscriptionId)))));
+                        c -> c.simplifiedSubscriptions.add(simplifiedSubscription),
+                        () -> this.denormalizedCacheConnections.add(
+                                DenormalizedCacheConnection.builder()
+                                        .id(subscription.getConnectionId())
+                                        .simplifiedSubscriptions(new HashSet<>(Set.of(simplifiedSubscription)))
+                                        .build()
+                        ));
     }
 
     /**
@@ -114,9 +112,9 @@ public class DenormalizedCacheValue {
     public void removeConnection(String connectionId) {
         assert connectionId != null;
 
-        Set<ConnectionSubscriptions> connectionSubscriptions = this.connectionSubscriptions
+        Set<DenormalizedCacheConnection> connectionSubscriptions = this.denormalizedCacheConnections
                 .stream()
-                .filter(c -> c.connectionId.equals(connectionId))
+                .filter(c -> c.getId().equals(connectionId))
                 .collect(Collectors.toSet());
 
         if (connectionSubscriptions.isEmpty()) {
@@ -124,7 +122,7 @@ public class DenormalizedCacheValue {
             return;
         }
 
-        this.connectionSubscriptions.removeAll(connectionSubscriptions);
+        this.denormalizedCacheConnections.removeAll(connectionSubscriptions);
     }
 
     /**
@@ -137,9 +135,9 @@ public class DenormalizedCacheValue {
         assert connectionId != null;
         assert subscriptionId != null;
 
-        Optional<ConnectionSubscriptions> optionalConnection = this.connectionSubscriptions
+        Optional<DenormalizedCacheConnection> optionalConnection = this.denormalizedCacheConnections
                 .stream()
-                .filter(c -> c.connectionId.equals(connectionId))
+                .filter(c -> c.getId().equals(connectionId))
                 .findFirst();
 
         if (optionalConnection.isEmpty()) {
@@ -148,17 +146,27 @@ public class DenormalizedCacheValue {
             return;
         }
 
-        ConnectionSubscriptions connection = optionalConnection.get();
-        if (connection.subscriptionIds.remove(subscriptionId) == false) {
-            logger.debug("Could not remove subscription {} from connection {}:  Subscription " +
-                    "not found.", subscriptionId, connectionId);
-        }
+        DenormalizedCacheConnection connection = optionalConnection.get();
 
-        if (connection.subscriptionIds.isEmpty()) {
-            logger.debug("Afer removing subscription {} from connection {}, connection has no " +
+        // Temporarily remove the connection from the set as we can't remove it from the set once it's mutated
+        this.denormalizedCacheConnections.remove(connection);
+
+        connection.getSimplifiedSubscriptions()
+                .stream()
+                .filter(s -> s.id.equals(subscriptionId))
+                .findAny()
+                .ifPresentOrElse(
+                        s -> connection.getSimplifiedSubscriptions().remove(s),
+                        () -> logger.debug("Could not remove subscription {} from connection {}:  Subscription " +
+                                "not found.", subscriptionId, connectionId)
+                );
+
+        // Add the connection back to the set if there are more subscriptions
+        if (!connection.getSimplifiedSubscriptions().isEmpty()) {
+            logger.info("After removing subscription {} from connection {}, connection has no " +
                     "more subscriptions associated with it.", subscriptionId, connectionId);
 
-            this.connectionSubscriptions.remove(connection);
+            this.denormalizedCacheConnections.add(connection);
         }
     }
 
@@ -167,7 +175,7 @@ public class DenormalizedCacheValue {
      */
     @JsonIgnore
     public boolean isEmpty() {
-        return this.connectionSubscriptions.isEmpty();
+        return this.denormalizedCacheConnections.isEmpty();
     }
 
     /**
@@ -177,7 +185,7 @@ public class DenormalizedCacheValue {
      */
     @JsonIgnore
     public Set<String> getConnectionIds() {
-        return this.connectionSubscriptions.stream().map(c -> c.connectionId).collect(Collectors.toSet());
+        return this.denormalizedCacheConnections.stream().map(c -> c.getId()).collect(Collectors.toSet());
     }
 
     /**
@@ -185,12 +193,13 @@ public class DenormalizedCacheValue {
      *
      * @post return != null
      */
+    @JsonIgnore
     public Set<String> getSubscriptionIds(String connectionId) {
-        return this.connectionSubscriptions
+        return this.denormalizedCacheConnections
                 .stream()
-                .filter(c -> c.connectionId.equals(connectionId))
+                .filter(c -> c.getId().equals(connectionId))
                 .findAny()
-                .map(c -> c.subscriptionIds)
+                .map(DenormalizedCacheConnection::getSubscriptionIds)
                 .orElse(Collections.emptySet());
     }
 
@@ -199,43 +208,54 @@ public class DenormalizedCacheValue {
      *
      * @post return != null
      */
+    @JsonIgnore
     public Map<String, Set<String>> getSubscriptionIdsByConnectionId() {
-        return this.connectionSubscriptions
+        return this.denormalizedCacheConnections
                 .stream()
-                .collect(Collectors.toMap(ConnectionSubscriptions::getConnectionId,
-                        ConnectionSubscriptions::getSubscriptionIds));
+                .collect(Collectors.toMap(DenormalizedCacheConnection::getId,
+                        DenormalizedCacheConnection::getSubscriptionIds));
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String toString() {
-        try {
-            return objectMapper.writer().writeValueAsString(this);
-        } catch (JsonProcessingException e) {
-            throw new AssertionError(e.getMessage());
-        }
-    }
-
-    /**
-     * {@code ConnectionSubscriptions} is a container class that associates subscriptions ids with a connection.
-     * <p/>
+     * {@code DenormalizedCacheConnection} is a container class that associates subscriptions ids with a connection.
      */
     @Value
     @Builder
     @Jacksonized
-    private static class ConnectionSubscriptions {
+    private static class DenormalizedCacheConnection {
         /**
-         * The connection ID associated with this denormalized connection
+         * The ID of this connection
          */
         @NonNull
-        String connectionId;
+        String id;
 
         /**
-         * The set of subscription ids associated with this denormalized connection
+         * The set of simplified subscriptions associated with this denormalized connection
+         */
+        @JsonProperty("subscriptions")
+        @NonNull
+        Set<SimplifiedSubscription> simplifiedSubscriptions;
+
+        Set<String> getSubscriptionIds() {
+            return this.simplifiedSubscriptions.stream().map(s -> s.id).collect(Collectors.toSet());
+        }
+    }
+
+    @Value
+    @Builder
+    @Jacksonized
+    private static class SimplifiedSubscription {
+
+        /**
+         * The id of this subscription
          */
         @NonNull
-        Set<String> subscriptionIds;
+        String id;
+
+        /**
+         * The sample rate for this subscription .  If null, do not apply the sample rate.
+         */
+        Integer sampleRate;
+
     }
 }
