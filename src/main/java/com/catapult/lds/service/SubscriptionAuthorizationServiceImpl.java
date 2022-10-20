@@ -22,46 +22,41 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * {@code JWTValidationService} provides methods for validating Open field Micro auth JWT claims set in Lambda request context.
+ * {@code JWTValidationService} provides methods for validating Open field Micro auth JWT claims set in Lambda request
+ * context.
  */
 public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthorizationService {
 
     /**
-     * The name of the environment variable which has a value of open field micro
-     * auth resource check endpoint
+     * The name of the environment variable which has a value of open field micro auth resource check endpoint
      */
     private static final String LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT_ENV = "LDS_OF_MICROAUTH_RESOURCE_CHECK_ENDPOINT";
-
-    /**
-     * API endpoint for Micro auth resource check
-     */
-    private static String resourceCheckEndpoint = null;
-
     /**
      * LDS scope in the JWT claim used to check access permission.
      */
     private static final String CONTEXT_LDS_SCOPE = "com.catapultsports.services.LDS";
-
-    /**
-     * The logger used by this handler.
-     *
-     * @invariant logger != null
-     */
-    private final Logger logger = LoggerFactory.getLogger(SubscriptionAuthorizationServiceImpl.class);
-
     /**
      * The object mapper used by this service.
      *
      * @invariant objectMapper != null
      */
     private static final ObjectMapper objectMapper = new ObjectMapper();
-
+    /**
+     * API endpoint for Micro auth resource check
+     */
+    private static String resourceCheckEndpoint = null;
     /**
      * Httpclient used by the service to make a call to Open Field microauth resource check endpoint
      *
      * @invariant httpClient != null
      */
     private static CloseableHttpClient httpClient = null;
+    /**
+     * The logger used by this handler.
+     *
+     * @invariant logger != null
+     */
+    private final Logger logger = LoggerFactory.getLogger(SubscriptionAuthorizationServiceImpl.class);
 
     /**
      * Creates a new {@code JWTClaimsValidationService}.
@@ -87,7 +82,6 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
         SubscriptionAuthorizationServiceImpl.resourceCheckEndpoint = resourceCheckEndpoint;
     }
 
-
     /**
      * {@inheritDoc}
      */
@@ -109,19 +103,20 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
 
         // validating LDS scope
         if (!authContext.containsScope(CONTEXT_LDS_SCOPE)) {
-            logger.error("Invalid scope: LDS scope not available");
+            this.logger.error("Invalid scope: LDS scope not available");
             throw new UnauthorizedUserException("User does not have permission to access live data");
         }
 
         // checking user permissions
-        if (!checkPermissionsOnUserResource(authContext.getSubject(), userId, authContext.getToken())) {
+        if (!this.checkPermissionsOnUserResource(authContext.getSubject(), userId, authContext.getToken())) {
             throw new UnauthorizedUserException("User does not have permission to access the subscribed resources");
         }
 
     }
 
     /**
-     * returns true if the given jwtSub has access to a live data stream attributed to the given subscribed user resource id
+     * returns true if the given jwtSub has access to a live data stream attributed to the given subscribed user
+     * resource id
      *
      * @pre jwtSub != null
      * @pre subscribedUserResourceId != null
@@ -152,10 +147,10 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
             response = httpClient.execute(httpPost);
 
         } catch (UnsupportedEncodingException | JsonProcessingException e) {
-            logger.error("Error creating request to check permissions on resource", e);
+            this.logger.error("Error creating request to check permissions on resource", e);
             return false;
         } catch (IOException e) {
-            logger.error("Error checking permissions on resource", e);
+            this.logger.error("Error checking permissions on resource", e);
             return false;
         }
 
@@ -170,12 +165,12 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
                         .anyMatch(user -> user.getIdentifier().equals(subscribedUserResourceId) && user.isRead());
 
             } else {
-                logger.error("Resource check call gave a non 200 response: Http Status code {}", response.getStatusLine().getStatusCode());
+                this.logger.error("Resource check call gave a non 200 response: Http Status code {}", response.getStatusLine().getStatusCode());
                 return false;
             }
 
         } catch (IOException e) {
-            logger.error("Error validating resource check response ", e);
+            this.logger.error("Error validating resource check response ", e);
             return false;
         }
     }

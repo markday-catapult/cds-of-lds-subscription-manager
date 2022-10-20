@@ -6,9 +6,11 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
 import com.catapult.lds.service.SubscriptionCacheService;
 import com.catapult.lds.service.SubscriptionException;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Builder;
+import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +84,7 @@ public class UnsubscribeRequestHandler implements RequestHandler<APIGatewayV2Web
 
         // process the request
         String subscriptionId = unsubscribeRequest.subscriptionId;
-        logger.debug("Cancelling subscription: '{}'", subscriptionId);
+        this.logger.debug("Cancelling subscription: '{}'", subscriptionId);
         try {
             subscriptionCacheService.cancelSubscription(connectionId, subscriptionId);
 
@@ -98,20 +100,13 @@ public class UnsubscribeRequestHandler implements RequestHandler<APIGatewayV2Web
         }
     }
 
-    @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+    @Value
+    @Jacksonized
+    @Builder
     public static class UnsubscribeRequest {
-        private String action;
-        private String requestId;
-        private String subscriptionId;
-
-        @Override
-        public String toString() {
-            return "UnsubscribeRequest{" +
-                    "action='" + action + '\'' +
-                    ", requestId='" + requestId + '\'' +
-                    ", subscriptionId='" + subscriptionId + '\'' +
-                    '}';
-        }
+        String action;
+        String requestId;
+        String subscriptionId;
     }
 
 }

@@ -8,8 +8,7 @@ import lombok.Builder;
 import lombok.NonNull;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -24,6 +23,7 @@ import java.util.stream.Collectors;
 @Value
 @Jacksonized
 @Builder
+@Slf4j
 public class DenormalizedCacheValue {
 
     /**
@@ -32,17 +32,12 @@ public class DenormalizedCacheValue {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * The logger used by all {@code DenormalizedCacheValue} instances
-     */
-    private static final Logger logger = LoggerFactory.getLogger(DenormalizedCacheValue.class);
-
-    /**
      * The key in the denormalized cache whose value is this denormalized cache value
      *
      * @invariant key != null
      */
     @NonNull
-    private final String key;
+    String key;
 
     /**
      * The set of connections and their subscriptions associated with the resource key
@@ -51,7 +46,7 @@ public class DenormalizedCacheValue {
      */
     @NonNull
     @JsonProperty("connections")
-    private final Set<DenormalizedCacheConnection> denormalizedCacheConnections;
+    Set<DenormalizedCacheConnection> denormalizedCacheConnections;
 
     public static DenormalizedCacheValue fromJson(String jsonString) {
         assert jsonString != null;
@@ -59,6 +54,7 @@ public class DenormalizedCacheValue {
         try {
             return objectMapper.readValue(jsonString, DenormalizedCacheValue.class);
         } catch (JsonProcessingException e) {
+            log.error("Could not deserialize DenormalizedCacheValue", e);
             throw new RuntimeException(e);
         }
     }
@@ -66,13 +62,14 @@ public class DenormalizedCacheValue {
     /**
      * Returns the json serialized form of this denormalized cache value
      *
-     * @throws SubscriptionException if an issue arises serializing this denormalized cache value to json.
+     * @throws RuntimeException if an issue arises serializing this denormalized cache value to json.
      * @post return != null
      */
     public String toJson() {
         try {
             return objectMapper.writeValueAsString(this);
         } catch (JsonProcessingException e) {
+            log.error("Could not serialize DenormalizedCacheValue", e);
             throw new RuntimeException(e);
         }
     }
@@ -112,17 +109,17 @@ public class DenormalizedCacheValue {
     public void removeConnection(String connectionId) {
         assert connectionId != null;
 
-        Set<DenormalizedCacheConnection> connectionSubscriptions = this.denormalizedCacheConnections
+        Set<DenormalizedCacheConnection> connections = this.denormalizedCacheConnections
                 .stream()
                 .filter(c -> c.getId().equals(connectionId))
                 .collect(Collectors.toSet());
 
-        if (connectionSubscriptions.isEmpty()) {
-            logger.debug("Could not remove connection {}:  Connection not found.", connectionId);
+        if (connections.isEmpty()) {
+            log.debug("Could not remove connection {}:  Connection not found.", connectionId);
             return;
         }
 
-        this.denormalizedCacheConnections.removeAll(connectionSubscriptions);
+        this.denormalizedCacheConnections.removeAll(connections);
     }
 
     /**
@@ -141,7 +138,7 @@ public class DenormalizedCacheValue {
                 .findFirst();
 
         if (optionalConnection.isEmpty()) {
-            logger.debug("Could not remove subscription {} from connection {}:  Connection not" +
+            log.debug("Could not remove subscription {} from connection {}:  Connection not" +
                     " found.", subscriptionId, connectionId);
             return;
         }
@@ -157,13 +154,13 @@ public class DenormalizedCacheValue {
                 .findAny()
                 .ifPresentOrElse(
                         s -> connection.getSimplifiedSubscriptions().remove(s),
-                        () -> logger.debug("Could not remove subscription {} from connection {}:  Subscription " +
+                        () -> log.debug("Could not remove subscription {} from connection {}:  Subscription " +
                                 "not found.", subscriptionId, connectionId)
                 );
 
         // Add the connection back to the set if there are more subscriptions
         if (!connection.getSimplifiedSubscriptions().isEmpty()) {
-            logger.info("After removing subscription {} from connection {}, connection has no " +
+            log.info("After removing subscription {} from connection {}, connection has no " +
                     "more subscriptions associated with it.", subscriptionId, connectionId);
 
             this.denormalizedCacheConnections.add(connection);
@@ -185,7 +182,10 @@ public class DenormalizedCacheValue {
      */
     @JsonIgnore
     public Set<String> getConnectionIds() {
-        return this.denormalizedCacheConnections.stream().map(c -> c.getId()).collect(Collectors.toSet());
+        return this.denormalizedCacheConnections
+                .stream()
+                .map(DenormalizedCacheConnection::getId)
+                .collect(Collectors.toSet());
     }
 
     /**

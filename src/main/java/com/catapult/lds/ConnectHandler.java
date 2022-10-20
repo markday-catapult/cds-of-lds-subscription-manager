@@ -58,9 +58,9 @@ public class ConnectHandler implements RequestHandler<APIGatewayV2WebSocketEvent
             }
 
             AuthContext authContext = AuthContext.extractContext(event.getRequestContext().getAuthorizer());
-            String subscriberId = authContext.getSubject();
+            String jwtSub = authContext.getSubject();
 
-            subscriptionCacheService.createConnection(connectionId, subscriberId);
+            subscriptionCacheService.createConnection(connectionId, jwtSub);
 
             APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
             response.setHeaders(Map.of("Sec-WebSocket-Protocol", "websocket"));

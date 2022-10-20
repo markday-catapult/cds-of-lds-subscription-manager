@@ -87,8 +87,8 @@ public interface SubscriptionCacheService {
      * Cleans the denormalized cache.  This method is not guaranteed to be performant, and must only be called for
      * maintenance purposes.
      *
-     * @param deadConnectionFilter is a filter that takes a list of connection ids and returns only the connection ids
-     *                             that are dead
+     * @param deadConnectionFilter is a function that given a list of connection ids, will return a list containing only
+     *                             the connection ids that are dead
      *
      * @pre deadConnectionFilter != null
      */

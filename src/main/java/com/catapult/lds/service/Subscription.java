@@ -24,7 +24,7 @@ public class Subscription {
      */
     @Builder.Default
     @NonNull
-    private String id = UUID.randomUUID().toString();
+    String id = UUID.randomUUID().toString();
 
     /**
      * The connection id for this subscription
@@ -32,21 +32,21 @@ public class Subscription {
      * @invariant connectionId != null
      */
     @NonNull
-    private String connectionId;
+    String connectionId;
 
     /**
-     * The set of resources ids for this subscription.  These resource ids will already have the keyspace prefix
-     * applied to them.
+     * The set of resources ids for this subscription.  These resource ids will already have the keyspace prefix applied
+     * to them.
      *
      * @invariant resources != null
      */
     @NonNull
     @Singular
-    private Set<String> resources;
+    Set<String> resources;
 
     /**
      * The sample rate for this subscription.  If null, sampling should not be done.
      */
-    private Integer sampleRate;
+    Integer sampleRate;
 
 }

@@ -6,14 +6,19 @@ import lombok.Builder;
 import lombok.NonNull;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * {@code Connection} is the top level object in the normalized cache.
+ */
 @Value
 @Jacksonized
 @Builder
-public class Connection {
+@Slf4j
+class Connection {
 
     /**
      * The object mapper used by this class.
@@ -28,7 +33,7 @@ public class Connection {
      * @invariant id != null
      */
     @NonNull
-    private String id;
+    String id;
 
     /**
      * The at which this connection was created at in milliseconds.
@@ -37,7 +42,7 @@ public class Connection {
      */
     @NonNull
     @Builder.Default
-    private long createdAt = System.currentTimeMillis();
+    Long createdAt = System.currentTimeMillis();
 
     /**
      * The openfield user id associated with the owner of this connection.
@@ -45,7 +50,7 @@ public class Connection {
      * @invariant subscriberId != null
      */
     @NonNull
-    private String subscriberId;
+    String subscriberId;
 
     /**
      * The set of subscriptions associated with this connection.
@@ -54,7 +59,7 @@ public class Connection {
      */
     @NonNull
     @Builder.Default
-    private Set<Subscription> subscriptions = new HashSet<>();
+    Set<Subscription> subscriptions = new HashSet<>();
 
     /**
      * Returns a new {@code Connection} from the given json string.
@@ -69,6 +74,7 @@ public class Connection {
         try {
             return objectMapper.readValue(jsonString, Connection.class);
         } catch (JsonProcessingException e) {
+            log.error("could not deserialize Connection", e);
             throw new SubscriptionException(e);
         }
     }
@@ -83,6 +89,7 @@ public class Connection {
         try {
             return objectMapper.writeValueAsString(this);
         } catch (JsonProcessingException e) {
+            log.error("could not serialize Connection", e);
             throw new SubscriptionException(e);
         }
     }

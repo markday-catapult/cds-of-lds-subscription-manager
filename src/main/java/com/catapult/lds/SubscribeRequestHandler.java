@@ -130,8 +130,6 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
                     .sampleRate(subscriptionRequest.sampleRate)
                     .build();
 
-            subscription.getResources();
-
             // JWT claims validation
             subscriptionAuthorizationService.checkAuthorizationForUserResource(subscriptionRequest.getUserId(),
                     AuthContext.extractContext(event.getRequestContext().getAuthorizer()));
@@ -167,12 +165,12 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
     @Builder
     public static class SubscriptionRequest {
 
-        private String action;
-        private String dataClass;
-        private String requestId;
-        private String userId;
-        private Integer sampleRate;
-        private SubscriptionRequestResources resources;
+        String action;
+        String dataClass;
+        String requestId;
+        String userId;
+        Integer sampleRate;
+        SubscriptionRequestResources resources;
 
         /**
          * Returns a set of namespaced resources for this subscription request.
@@ -202,14 +200,15 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
         }
 
         /**
-         * {@code SubscriptionRequestResources} contains information about the resources requested in a {@link SubscribeRequestHandler.SubscriptionRequest}
+         * {@code SubscriptionRequestResources} contains information about the resources requested in a
+         * {@link SubscribeRequestHandler.SubscriptionRequest}
          **/
         @Value
         @Jacksonized
         @Builder
         public static class SubscriptionRequestResources {
             @JsonProperty("deviceId")
-            private Set<String> deviceIds;
+            Set<String> deviceIds;
         }
 
     }

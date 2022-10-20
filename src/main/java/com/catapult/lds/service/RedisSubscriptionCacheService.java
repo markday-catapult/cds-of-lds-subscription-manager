@@ -1,7 +1,5 @@
 package com.catapult.lds.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -41,23 +39,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     public static final String LDS_REDIS_PORT_ENV = "LDS_REDIS_PORT";
 
     /**
-     * The name of the key which has a value of the timestamp that a hash value was created at.
-     */
-    private static final String CREATED_AT = "created_at";
-
-    /**
-     * The name of the key which has a value of the subscriber id of a subscriptions.
-     */
-    private static final String SUBSCRIBER_ID = "subscriber_id";
-
-    /**
-     * The object mapper used by this service.
-     *
-     * @invariant objectMapper != null
-     */
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-
-    /**
      * The namespace for a connection key
      */
     private static final String CONNECTION_NAMESPACE = "$connection-id-";
@@ -69,7 +50,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
     private static final String CONNECTIONS_KEY = "$connections";
 
     /**
-     * Connection to AWS Elasticache redis cluster
+     * Connection to a redis cluster
      *
      * @invariant redisClient != null
      */
@@ -89,35 +70,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         RedisURI redisURI = RedisURI.create(host, Integer.parseInt(port));
 
         this.redisClient = RedisClient.create(redisURI).connect();
-    }
-
-    /**
-     * Helper method that converts the given set of strings to a stringified json array.
-     *
-     * @pre set != null
-     * @post return != null
-     */
-    static String setToJsonString(Set<String> set) {
-        assert set != null;
-
-        try {
-            return objectMapper.writeValueAsString(set);
-        } catch (JsonProcessingException e) {
-            throw new AssertionError(e.getMessage());
-        }
-    }
-
-    /**
-     * Deserializes the given subscription json.
-     *
-     * @throws RuntimeException if there was an issue deserializing the subscription json
-     */
-    private static Subscription subscriptionJsonToSubscription(String subscriptionJson) {
-        try {
-            return objectMapper.readValue(subscriptionJson, Subscription.class);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     /**
@@ -206,7 +158,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
         Set<String> remainingSubscriptionIds = connection.getSubscriptions()
                 .stream()
-                .map(s -> s.getId())
+                .map(Subscription::getId)
                 .collect(Collectors.toSet());
 
         this.logger.debug("removing all remaining subscriptions {} ", remainingSubscriptionIds);
@@ -352,7 +304,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
 
             // remove denormalized connections from a device if the list of subscriptions is empty
 
-            this.logger.trace("modifiedResources: {} " + resourcesToModify);
+            this.logger.trace("modifiedResources: {} ", resourcesToModify);
 
             // delete resource cache
             if (resourcesToDelete.size() > 0) {
@@ -407,7 +359,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
             String type = this.redisClient.sync().type(k);
             if (type.equals("string")) cache.put(k, this.redisClient.sync().get(k));
             else if (type.equals("set")) cache.put(k, this.redisClient.sync().smembers(k));
-            else cache.put(k, this.redisClient.sync().hgetall(k));
         }
 
         return cache;
@@ -422,13 +373,14 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         this.logger.info("cleaning cache");
 
         var denormalizedCacheValuesByKey =
-                this.getDenormalizedConnectionsForResourceIds(this.dumpCache().keySet().stream().filter(s -> !s.startsWith(
-                        "$connection")).collect(Collectors.toSet()));
-
-        Set<String> denormalizedCacheEntriesToRemove = new HashSet<>();
+                this.getDenormalizedConnectionsForResourceIds(
+                        this.dumpCache()
+                                .keySet()
+                                .stream()
+                                .filter(s -> !s.startsWith(CONNECTION_NAMESPACE) && !s.startsWith(CONNECTIONS_KEY))
+                                .collect(Collectors.toSet()));
 
         for (var entry : denormalizedCacheValuesByKey.entrySet()) {
-            String resourceId = entry.getKey();
             DenormalizedCacheValue denormalizedCacheValue = entry.getValue();
 
             var connectionIds = denormalizedCacheValue.getConnectionIds();
@@ -453,7 +405,7 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
                                 es -> es.getValue().toJson()));
 
         // remove denormalized connections from a device if the list of subscriptions is empty
-        this.logger.debug("modifiedResources: {} " + resourcesToModify);
+        this.logger.debug("modifiedResources: {} ", resourcesToModify);
 
         // modify resource cache entries
         if (resourcesToModify.size() > 0) {
