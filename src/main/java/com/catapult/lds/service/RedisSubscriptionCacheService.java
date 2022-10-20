@@ -291,21 +291,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         this.logger.debug("sending request to cache: {}", request);
     }
 
-//    /**
-//     * {@inheritDoc}
-//     */
-//    @Override
-//    public Collection<Subscription> getSubscriptions(String connectionId) throws SubscriptionException {
-//        assert connectionId != null;
-//
-//        RedisCommands<String, String> syncCommands = this.redisClient.sync();
-//
-//        String connectionKey = this.connectionIdToKey(connectionId);
-//        Connection connection = this.getConnection(connectionKey);
-//
-//        return connection.getSubscriptions();
-//    }
-
     /**
      * {@inheritDoc}
      */
@@ -383,30 +368,6 @@ public class RedisSubscriptionCacheService implements SubscriptionCacheService {
         connection.removeSubscription(subscriptionId);
         syncCommands.set(connectionKey, connection.toJson());
     }
-
-//    /**
-//     * {@inheritDoc}
-//     */
-//    @Override
-//    public Subscription getSubscription(String connectionId, String subscriptionId) throws SubscriptionException {
-//        assert connectionId != null;
-//        assert subscriptionId != null;
-//
-//        RedisCommands<String, String> syncCommands = this.redisClient.sync();
-//
-//        final String connectionKey = this.connectionIdToKey(connectionId);
-//        final String subscriptionJson = syncCommands.hget(connectionKey, subscriptionId);
-//
-//        if (subscriptionJson == null) {
-//            return null;
-//        }
-//
-//        try {
-//            return objectMapper.readValue(subscriptionJson, Subscription.class);
-//        } catch (JsonProcessingException e) {
-//            throw new SubscriptionException("Could not deserialize subscription: " + subscriptionJson, e);
-//        }
-//    }
 
     /**
      * {@inheritDoc}

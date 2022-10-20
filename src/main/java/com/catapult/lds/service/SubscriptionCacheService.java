@@ -34,7 +34,6 @@ public interface SubscriptionCacheService {
      * Returns the connection associated with the given connection id.
      *
      * @throws SubscriptionException if the given connection id does not exist in the cache.
-     *
      * @pre connectionId != null
      */
     Connection getConnection(String connectionId) throws SubscriptionException;
@@ -44,7 +43,6 @@ public interface SubscriptionCacheService {
      * associated with this connection from the normalized cache.
      *
      * @throws SubscriptionException if the given connection id does not exist in the cache.
-     *
      * @pre connectionId != null
      */
     void closeConnection(String connectionId) throws SubscriptionException;
@@ -67,25 +65,6 @@ public interface SubscriptionCacheService {
      */
     void cancelSubscription(String connectionId, String subscriptionId) throws SubscriptionException;
 
-//    /**
-//     * Returns a collection of subscriptions associated with the given connection id.
-//     *
-//     * @throws SubscriptionException if a connection with the given connection id does not exist in the cache.
-//     * @pre connectionId != null
-//     * @post return != null
-//     */
-//    Collection<Subscription> getSubscriptions(String connectionId) throws SubscriptionException;
-//
-//    /**
-//     * Returns the subscription associated with the given connection id and subscription id, or null if no such
-//     * subscription exists.
-//     *
-//     * @throws SubscriptionException if an issue occurred retrieving the subscription.
-//     *
-//     * @pre connectionId != null
-//     */
-//    Subscription getSubscription(String connectionId, String subscriptionId) throws SubscriptionException;
-
     /**
      * Returns a map of {@code denormalized cache values} associated with the given criteria.  Any resource ids that did
      * not have connections associated with it will have an {@linkplain DenormalizedCacheValue#isEmpty empty} value.
@@ -100,7 +79,7 @@ public interface SubscriptionCacheService {
      * Returns the entire cache.  This method is not guaranteed to be performant, and must only be called for
      * maintenance purposes.
      *
-     *  @post return != null
+     * @post return != null
      */
     Map<String, Object> dumpCache();
 
@@ -108,9 +87,8 @@ public interface SubscriptionCacheService {
      * Cleans the denormalized cache.  This method is not guaranteed to be performant, and must only be called for
      * maintenance purposes.
      *
-     *
-     * @param deadConnectionFilter is a filter that takes a list of connection ids and returns only the connection
-     *                             ids that are dead
+     * @param deadConnectionFilter is a filter that takes a list of connection ids and returns only the connection ids
+     *                             that are dead
      *
      * @pre deadConnectionFilter != null
      */
