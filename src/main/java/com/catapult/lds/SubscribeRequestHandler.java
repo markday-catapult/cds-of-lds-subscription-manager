@@ -133,6 +133,8 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
             // Add the subscription
             subscriptionCacheService.addSubscription(subscription);
 
+            Util.statsd.increment("catapult.openfield.lds.live.subscriptions");
+
             // return a successful response
             return Util.createSubscriptionResponse(
                     HttpURLConnection.HTTP_CREATED,
@@ -195,7 +197,8 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
         }
 
         /**
-         * {@code SubscriptionRequestResources} contains information about the resources requested in a {@link SubscribeRequestHandler.SubscriptionRequest}
+         * {@code SubscriptionRequestResources} contains information about the resources requested in a
+         * {@link SubscribeRequestHandler.SubscriptionRequest}
          **/
         @Value
         @Jacksonized

@@ -82,9 +82,11 @@ public class UnsubscribeRequestHandler implements RequestHandler<APIGatewayV2Web
 
         // process the request
         String subscriptionId = unsubscribeRequest.subscriptionId;
-        logger.debug("Cancelling subscription: '{}'", subscriptionId);
+        this.logger.debug("Cancelling subscription: '{}'", subscriptionId);
         try {
             subscriptionCacheService.cancelSubscription(connectionId, subscriptionId);
+
+            Util.statsd.decrement("catapult.openfield.lds.live.subscriptions");
 
             // return a successful response
             return Util.createUnsubscribeResponse(
@@ -107,9 +109,9 @@ public class UnsubscribeRequestHandler implements RequestHandler<APIGatewayV2Web
         @Override
         public String toString() {
             return "UnsubscribeRequest{" +
-                    "action='" + action + '\'' +
-                    ", requestId='" + requestId + '\'' +
-                    ", subscriptionId='" + subscriptionId + '\'' +
+                    "action='" + this.action + '\'' +
+                    ", requestId='" + this.requestId + '\'' +
+                    ", subscriptionId='" + this.subscriptionId + '\'' +
                     '}';
         }
     }

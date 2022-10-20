@@ -3,12 +3,25 @@ package com.catapult.lds;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
 import com.catapult.lds.service.RedisSubscriptionCacheService;
 import com.catapult.lds.service.SubscriptionCacheService;
+import com.timgroup.statsd.NonBlockingStatsDClientBuilder;
+import com.timgroup.statsd.StatsDClient;
 import org.json.JSONObject;
 
 /**
  * {@code Util} provides generic convenience methods to all handlers.
  */
 public class Util {
+
+    /**
+     * The singleton {@code StatsDClient}
+     *
+     * @invariant statsd != null
+     */
+    protected static final StatsDClient statsd = new NonBlockingStatsDClientBuilder()
+            .prefix("statsd")
+            .hostname("localhost")
+            .port(8125)
+            .build();
 
     /**
      * The singleton {@code SubscriptionCacheService}

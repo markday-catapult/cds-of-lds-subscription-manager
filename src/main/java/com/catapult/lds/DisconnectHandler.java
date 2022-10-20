@@ -58,9 +58,10 @@ public class DisconnectHandler implements RequestHandler<APIGatewayV2WebSocketEv
             APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
             response.setStatusCode(HttpURLConnection.HTTP_NO_CONTENT);
             response.setBody("ok");
+            Util.statsd.decrement("catapult.openfield.lds.live.connections");
             return response;
         } catch (SubscriptionException e) {
-            logger.debug(e.getMessage());
+            this.logger.debug(e.getMessage());
             APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
             response.setStatusCode(HttpURLConnection.HTTP_GONE);
             response.setBody(e.getMessage());

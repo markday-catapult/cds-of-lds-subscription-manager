@@ -59,9 +59,10 @@ public class ConnectHandler implements RequestHandler<APIGatewayV2WebSocketEvent
             subscriptionCacheService.createConnection(connectionId);
 
             APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
-            response.setHeaders(Map.of("Sec-WebSocket-Protocol","websocket"));
+            response.setHeaders(Map.of("Sec-WebSocket-Protocol", "websocket"));
             response.setStatusCode(HttpURLConnection.HTTP_OK);
             response.setBody("ok");
+            Util.statsd.increment("catapult.openfield.lds.live.connections");
             return response;
         } catch (SubscriptionException e) {
             APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();

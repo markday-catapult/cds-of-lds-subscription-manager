@@ -84,6 +84,12 @@
             <version>${lombok.version}</version>
             <scope>provided</scope>
         </dependency>
+        <!-- DataDog statsd client -->
+        <dependency>
+            <groupId>com.datadoghq</groupId>
+            <artifactId>java-dogstatsd-client</artifactId>
+            <version>4.1.0</version>
+        </dependency>
         <!-- Mockito -->
         <dependency>
             <groupId>org.mockito</groupId>
