@@ -93,57 +93,67 @@ Example:
 
 The denormalized cache utilizes a [redis string](https://redis.io/docs/data-types/strings/) data type to persist the
 information needed by the demuxer to efficiently route messages to connections. The key is the resource id and the
-value is a stringified JSON list of Denormalized Cache Connection objects.
+value is a stringified JSON Object with the following structure:
 
-| Key             | Required | Value                                                        |
-|-----------------|----------|--------------------------------------------------------------|
-| `id`            | Yes      | The id of the connection that the resource should be sent to | 
-| `subscriptions` | Yes      | An array where each value is a Simplified Subscription       |  
+##### Denormalized Cache Value
 
-Simplified Subscription Object
+| Key             | Required | Value                                                                                       |
+|-----------------|----------|---------------------------------------------------------------------------------------------|
+| `key`           | Yes      | the resource id associated with the denormalized cache value                                | 
+| `subscriptions` | Yes      | An array where each value is a denormalized cache connection object. This list maybe empty. |
+
+##### Denormalized Cache Connection object
+
+| Key             | Required | Value                                                                                                   |
+|-----------------|----------|---------------------------------------------------------------------------------------------------------|
+| `id`            | Yes      | The id of the connection that the resource should be sent to                                            | 
+| `subscriptions` | Yes      | An array where each value is a Simplified Subscription. This list always has at least one subscription |  
+
+##### Simplified Subscription Object
 
 | Key          | Required | Value                       |
 |--------------|----------|-----------------------------|
 | `id`         | Yes      | The id of the subscription  | 
 | `sampleRate` | Yes      | The sample rare of the data |  
 
-Example:
+##### Example:
 
 ```json 
 {
-
-[
-  {
-    "connectionId": "connection-id-abc",
-    "subscriptions": [
-      {
-        "id": "subscription-id-123",
-        "sampleRate": 5
-      },
-      {
-        "id": "subscription-id-123",
-        "sampleRate": 2
-      }
-    ]
-  },
-  {
-    "connectionId": "connection-id-def",
-    "subscriptionIds": [
-      {
-        "id": "subscription-id-777"
-      }
-    ]
-  },
-  {
-    "connectionId": "connection-id-ghi",
-    "subscriptionIds": [
-      {
-        "id": "subscription-id-123",
-        "sampleRate": 1
-      }
-    ]
-  }
-]
+  "key": "athlete-id-aaa",
+  "connections": [
+    {
+      "connectionId": "connection-id-abc",
+      "subscriptions": [
+        {
+          "id": "subscription-id-123",
+          "sampleRate": 5
+        },
+        {
+          "id": "subscription-id-123",
+          "sampleRate": 2
+        }
+      ]
+    },
+    {
+      "connectionId": "connection-id-def",
+      "subscriptionIds": [
+        {
+          "id": "subscription-id-777"
+        }
+      ]
+    },
+    {
+      "connectionId": "connection-id-ghi",
+      "subscriptionIds": [
+        {
+          "id": "subscription-id-123",
+          "sampleRate": 1
+        }
+      ]
+    }
+  ]
+}
 ```
 
 The Resource Namespace consists of three parts - a data class (used to disambiguate a resource that may appear in
