@@ -20,7 +20,7 @@ of [AWS Lambdas](https://docs.aws.amazon.com/lambda/index.html) and accessed via
 
 ### Data structures
 
-The subscription manager stores two conceptually distinct caches in a single shared redis logical database - the
+The subscription manager stores two conceptually distinct caches in a single shared **redis** logical database - the
 **Normalized Cache** which is designed to be accessed via a connection key, and the **Denormalized Cache** which is
 designed to be accessed by a resource ID. Both caches use a namespacing technique to avoid possible key collisions
 between the two. Both caches are updated during subscribe/unsubscribe actions.
@@ -29,37 +29,130 @@ between the two. Both caches are updated during subscribe/unsubscribe actions.
 
 Redis key Namespace: `$connection-id`
 
-The normalized cache utilizes a [redis hash](https://redis.io/docs/manual/data-types/#hashes) data type to persist
-information about a websocket's subscriptions. Valid key/value pairs are in this hash are as follows:
+The normalized cache utilizes a [redis string](https://redis.io/docs/data-types/strings/) data type to persist
+information about a websocket's subscriptions. The value is a stringified json object with the following keys:
 
-| Key                | Value                                                                                                                               |
-|--------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| `created-at`       | Stringified timestamp in ms                                                                                                         |
-| `<subscription id>` | Stringified JSON array with each value being a key into the denormalized cache<br/>(see the namespacing description for those keys) |
+| Key             | Required | Value                                                        |
+|-----------------|----------|--------------------------------------------------------------|
+| `id`            | Yes      | The connection ID                                            |
+| `createdAt`     | Yes      | Stringified timestamp in ms                                  |
+| `subscriberId`  | Yes      | The user key of the subscriber (the owner of the connection) |
+| `subscriptions` | Yes      | A list of Subscription objects as defined below              |
+
+Subscription object:
+
+| Key            | Required | Value                                                                                                                                                |
+|----------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `id`           | Yes      | The subscription id                                                                                                                                  |
+| `connectionId` | Yes      | The id of the connection that the subscription is associated with                                                                                    | 
+| `resources`    | Yes      | An array where each value is a key into the denormalized cache (see the namespacing description for those keys)                                      |
+| `sample_rate`  | No       | If present, the sample rate in Hz of the data subscribed to. If not present, no downsampling is applied to data. Valid values for this are 1,2,5,10. | 
 
 Example:
 
 ```json
 
 {
-  "$connection-id:connection-id-1": {
-    "created_at": "1658858886356",
-    "<SUBSCRIPTION_ID_1>": "[\"ts:device:dev-id-1\",\"ts:device:dev-id-2\"]",
-    "<SUBSCRIPTION_ID_2>": "[\"ts:athlete:ath-id-1\",\"ts:user:user-id-1\"]"
-  }
+  "id": "CON1",
+  "createdAt": 1666211855095,
+  "subscriberId": "subscriber-id",
+  "subscriptions": [
+    {
+      "id": "5f369f08-db7e-4e48-91aa-dfd0cd8a6b85",
+      "connectionId": "CON1",
+      "resources": [
+        "athlete-id-2",
+        "athlete-id-1"
+      ],
+      "sampleRate": null
+    },
+    {
+      "id": "12196176-f32b-40ac-a1d6-efe94cfe8e8e",
+      "connectionId": "CON1",
+      "resources": [
+        "device-id-1",
+        "athlete-id-1",
+        "device-id-2"
+      ],
+      "sampleRate": 1
+    },
+    {
+      "id": "4010523e-3e6f-493e-8757-b5504a098d4f",
+      "connectionId": "CON1",
+      "resources": [
+        "device-id-1",
+        "athlete-id-1"
+      ],
+      "sampleRate": 2
+    }
+  ]
 }
-
 ```
 
 #### The Denormalized Cache
 
-The denormalized cache consists of key/value pairs of strings with the key being a namespaced resource id, and the value
-being a stringified json list of objects. Each object contains two key/value pairs
+The denormalized cache utilizes a [redis string](https://redis.io/docs/data-types/strings/) data type to persist the
+information needed by the demuxer to efficiently route messages to connections. The key is the resource id and the
+value is a stringified JSON Object with the following structure:
+
+##### Denormalized Cache Value
+
+| Key             | Required | Value                                                                                       |
+|-----------------|----------|---------------------------------------------------------------------------------------------|
+| `key`           | Yes      | the resource id associated with the denormalized cache value                                | 
+| `subscriptions` | Yes      | An array where each value is a denormalized cache connection object. This list maybe empty. |
+
+##### Denormalized Cache Connection object
+
+| Key             | Required | Value                                                                                                   |
+|-----------------|----------|---------------------------------------------------------------------------------------------------------|
+| `id`            | Yes      | The id of the connection that the resource should be sent to                                            | 
+| `subscriptions` | Yes      | An array where each value is a Simplified Subscription. This list always has at least one subscription |  
+
+##### Simplified Subscription Object
+
+| Key          | Required | Value                       |
+|--------------|----------|-----------------------------|
+| `id`         | Yes      | The id of the subscription  | 
+| `sampleRate` | Yes      | The sample rare of the data |  
+
+##### Example:
 
 ```json 
 {
-  "connectionId": "connection-id-abc",
-  "subscriptionIds": ["subscription-id-123","subscription-id-456"]
+  "key": "athlete-id-aaa",
+  "connections": [
+    {
+      "connectionId": "connection-id-abc",
+      "subscriptions": [
+        {
+          "id": "subscription-id-123",
+          "sampleRate": 5
+        },
+        {
+          "id": "subscription-id-123",
+          "sampleRate": 2
+        }
+      ]
+    },
+    {
+      "connectionId": "connection-id-def",
+      "subscriptionIds": [
+        {
+          "id": "subscription-id-777"
+        }
+      ]
+    },
+    {
+      "connectionId": "connection-id-ghi",
+      "subscriptionIds": [
+        {
+          "id": "subscription-id-123",
+          "sampleRate": 1
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -69,7 +162,7 @@ listed order. All three parts must be present.
 
 - Data Class
     - `ts` - time series
-    - `su` - summary data
+    - `ad` - aggregate data
 - Resource Type
     - `user`
     - `device`

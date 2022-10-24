@@ -62,14 +62,14 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
     private final Logger logger = LoggerFactory.getLogger(ConnectionMaintenanceTask.class);
 
     @Override
-    public ConnectionMaintenanceResult call() throws Exception {
+    public ConnectionMaintenanceResult call() {
         ConnectionMaintenanceResult taskResult = new ConnectionMaintenanceResult();
 
         if (this.dumpCache) {
-            taskResult.databaseDumpPreCleanup.putAll(subscriptionCacheService.dumpCache());
+            taskResult.databaseDumpPreCleanup.putAll(this.subscriptionCacheService.dumpCache());
         }
 
-        Set<String> connectionIds = subscriptionCacheService.getAllConnectionIds();
+        Set<String> connectionIds = this.subscriptionCacheService.getAllConnectionIds();
         this.logger.debug("cache has a record of {} open connections: {} ", connectionIds.size(), connectionIds);
 
         for (String connectionId : connectionIds) {
@@ -80,7 +80,7 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
             Date connectedAt;
 
             try {
-                GetConnectionResult result = apiGatewayClient.getConnection(request);
+                GetConnectionResult result = this.apiGatewayClient.getConnection(request);
                 connectedAt = result.getConnectedAt();
             } catch (GoneException e) {
                 connectedAt = null;
@@ -93,7 +93,7 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
                 taskResult.cleanedUpConnections.add(connectionId);
                 this.logger.debug("connection '{}' was GONE, closing connection.", connectionId);
                 try {
-                    subscriptionCacheService.closeConnection(connectionId);
+                    this.subscriptionCacheService.closeConnection(connectionId);
                 } catch (SubscriptionException e) {
                     // fail and continue cleanup if the connection was not found in the cache.
                     this.logger.error("error trying to clean up the connection '" + connectionId + "'", e);
@@ -103,21 +103,24 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
 
         // function that returns the set of all connections that are not active
         Function<Set<String>, Set<String>> deadConnectionFilter =
-                x -> x.stream().filter(s -> {
-                    try {
-                        GetConnectionRequest request = new GetConnectionRequest();
-                        request.setConnectionId(s);
-                        this.apiGatewayClient.getConnection(request);
-                        return false;
-                    } catch (GoneException e) {
-                        return true;
-                    }
-                }).collect(Collectors.toSet());
+                connectionIdSet -> connectionIdSet
+                        .stream()
+                        .filter(connectionId -> {
+                            try {
+                                GetConnectionRequest request = new GetConnectionRequest();
+                                request.setConnectionId(connectionId);
+                                this.apiGatewayClient.getConnection(request);
+                                return false;
+                            } catch (GoneException e) {
+                                return true;
+                            }
+                        })
+                        .collect(Collectors.toSet());
 
-        subscriptionCacheService.cleanCache(deadConnectionFilter);
+        this.subscriptionCacheService.cleanCache(deadConnectionFilter);
 
         if (this.dumpCache) {
-            taskResult.databaseDumpPostCleanup.putAll(subscriptionCacheService.dumpCache());
+            taskResult.databaseDumpPostCleanup.putAll(this.subscriptionCacheService.dumpCache());
         }
 
         this.logger.debug("{} connections preserved: {}",
@@ -133,9 +136,9 @@ public class ConnectionMaintenanceTask implements Callable<ConnectionMaintenance
     @Value
     @Jacksonized
     public static class ConnectionMaintenanceResult {
-        private Collection<String> preservedConnections = new HashSet<>();
-        private Collection<String> cleanedUpConnections = new HashSet<>();
-        private Map<String, Object> databaseDumpPreCleanup = new HashMap<>();
-        private Map<String, Object> databaseDumpPostCleanup = new HashMap<>();
+        Collection<String> preservedConnections = new HashSet<>();
+        Collection<String> cleanedUpConnections = new HashSet<>();
+        Map<String, Object> databaseDumpPreCleanup = new HashMap<>();
+        Map<String, Object> databaseDumpPostCleanup = new HashMap<>();
     }
 }

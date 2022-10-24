@@ -1,68 +1,52 @@
 package com.catapult.lds.service;
 
-import org.json.JSONArray;
+import lombok.Builder;
+import lombok.NonNull;
+import lombok.Singular;
+import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * {@code Subscription} is an immutable.... TBD
  */
+@Value
+@Jacksonized
+@Builder
 public class Subscription {
 
-    private final String id;
-    private final String connectionId;
-    private final Set<String> resources;
-
-    public Subscription(String connectionId, Set<String> resources) {
-        assert connectionId != null;
-        assert !resources.isEmpty();
-
-        this.id = UUID.randomUUID().toString();
-        this.connectionId = connectionId;
-        this.resources = Set.copyOf(resources);
-    }
-
-    public Subscription(String connectionId, String id, String resourceListJson) {
-        assert connectionId != null;
-        assert resourceListJson != null;
-
-        this.id = id;
-        this.connectionId = connectionId;
-        this.resources =
-                StreamSupport.stream(new JSONArray(resourceListJson).spliterator(), false)
-                        .map(Object::toString)
-                        .collect(Collectors.toSet());
-    }
+    /**
+     * The id of this subscription.
+     *
+     * @invariant id != null
+     */
+    @Builder.Default
+    @NonNull
+    String id = UUID.randomUUID().toString();
 
     /**
-     * Returns the id of this subscription
+     * The connection id for this subscription
      *
-     * @post return != null
+     * @invariant connectionId != null
      */
-    public String getId() {
-        return this.id;
-    }
+    @NonNull
+    String connectionId;
 
     /**
-     * Returns the connection id for this subscription
+     * The set of resources ids for this subscription.  These resource ids will already have the keyspace prefix applied
+     * to them.
      *
-     * @post return != null
+     * @invariant resources != null
      */
-    public String getConnectionId() {
-        return this.connectionId;
-    }
+    @NonNull
+    @Singular
+    Set<String> resources;
 
     /**
-     * Returns the set of resources ids for this subscription.  These resource ids will already * have the keyspace
-     * prefix applied to them.
-     *
-     * @post !return.isEmpty()
+     * The sample rate for this subscription.  If null, sampling should not be done.
      */
-    public Set<String> getResources() {
-        return new HashSet<>(this.resources);
-    }
+    Integer sampleRate;
+
 }

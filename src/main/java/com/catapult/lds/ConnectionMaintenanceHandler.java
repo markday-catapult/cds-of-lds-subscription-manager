@@ -24,17 +24,12 @@ public class ConnectionMaintenanceHandler implements RequestHandler<APIGatewayV2
     /**
      * The name of the environment variable which has a value of the url api gateway.
      */
-    public final static String WEBSOCKET_CONNECTION_URL_ENV = "LDS_WEBSOCKET";
-
-    /**
-     * The name of the environment variable which has a value of websocket connect timeout in milliseconds.
-     */
-    public final static String WEBSOCKET_CONNECTION_TIMEOUT_ENV = "LDS_WEBSOCKET_CONNECT_TIMEOUT_MILLISECONDS";
+    public static final String WEBSOCKET_CONNECTION_URL_ENV = "LDS_WEBSOCKET";
 
     /**
      * The name of the environment variable which has a value of aws region.
      */
-    public final static String AWS_REGION_ENV = "AWS_REGION";
+    public static final String AWS_REGION_ENV = "AWS_REGION";
 
     /**
      * The singleton {@code SubscriptionCacheService}
@@ -58,13 +53,6 @@ public class ConnectionMaintenanceHandler implements RequestHandler<APIGatewayV2
     private final Logger logger = LoggerFactory.getLogger(ConnectionMaintenanceHandler.class);
 
     /**
-     * Websocket connect timeout in seconds.
-     *
-     * @invariant connectTimeout != null
-     */
-    private final Integer connectionTimeout;
-
-    /**
      * The asynchronous api client used by this websocket manager.
      *
      * @invariant client != null
@@ -74,13 +62,12 @@ public class ConnectionMaintenanceHandler implements RequestHandler<APIGatewayV2
     {
         String signingRegion = System.getenv(AWS_REGION_ENV);
         String websocketConnectionUrl = System.getenv(WEBSOCKET_CONNECTION_URL_ENV);
-        connectionTimeout = Integer.parseInt(System.getenv(WEBSOCKET_CONNECTION_TIMEOUT_ENV));
 
         AmazonApiGatewayManagementApiAsyncClientBuilder builder = AmazonApiGatewayManagementApiAsyncClientBuilder.standard();
         AwsClientBuilder.EndpointConfiguration config =
                 new AwsClientBuilder.EndpointConfiguration(websocketConnectionUrl, signingRegion);
         builder.setEndpointConfiguration(config);
-        client = builder.build();
+        this.client = builder.build();
     }
 
     /**
@@ -101,12 +88,12 @@ public class ConnectionMaintenanceHandler implements RequestHandler<APIGatewayV2
         final String responseBody;
         try {
             ConnectionMaintenanceTask.ConnectionMaintenanceResult taskResult =
-                    new ConnectionMaintenanceTask(subscriptionCacheService, client, dumpCache).call();
+                    new ConnectionMaintenanceTask(subscriptionCacheService, this.client, dumpCache).call();
 
             responseBody = dumpCache ? objectMapper.writeValueAsString(taskResult) : "ok";
 
         } catch (Exception e) {
-            logger.debug(e.getMessage());
+            this.logger.debug(e.getMessage());
             APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
             response.setStatusCode(HttpURLConnection.HTTP_GONE);
             response.setBody(e.getMessage());

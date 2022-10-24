@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2WebSocketResponse;
+import com.catapult.lds.service.AuthContext;
 import com.catapult.lds.service.SubscriptionCacheService;
 import com.catapult.lds.service.SubscriptionException;
 import org.slf4j.Logger;
@@ -56,10 +57,13 @@ public class ConnectHandler implements RequestHandler<APIGatewayV2WebSocketEvent
                 return response;
             }
 
-            subscriptionCacheService.createConnection(connectionId);
+            AuthContext authContext = AuthContext.extractContext(event.getRequestContext().getAuthorizer());
+            String jwtSub = authContext.getSubject();
+
+            subscriptionCacheService.createConnection(connectionId, jwtSub);
 
             APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
-            response.setHeaders(Map.of("Sec-WebSocket-Protocol","websocket"));
+            response.setHeaders(Map.of("Sec-WebSocket-Protocol", "websocket"));
             response.setStatusCode(HttpURLConnection.HTTP_OK);
             response.setBody("ok");
             return response;

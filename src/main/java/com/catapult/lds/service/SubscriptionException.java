@@ -16,4 +16,28 @@ public class SubscriptionException extends Exception {
         assert message != null;
     }
 
+    /**
+     * Creates a {@code SubscriptionException} with the given message and throwable.
+     *
+     * @pre message != null
+     * @pre throwable != null
+     */
+    public SubscriptionException(String message, Throwable throwable) {
+        super(message, throwable);
+
+        assert message != null;
+        assert throwable != null;
+    }
+
+    /**
+     * Creates a {@code SubscriptionException} with the given throwable.
+     *
+     * @pre throwable != null
+     */
+    public SubscriptionException(Throwable throwable) {
+        super(throwable);
+
+        assert throwable != null;
+    }
+
 }
