@@ -68,15 +68,15 @@ public class ConnectHandler implements RequestHandler<APIGatewayV2WebSocketEvent
             response.setBody("ok");
             return response;
         } catch (SubscriptionException e) {
-            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
-            response.setStatusCode(HttpURLConnection.HTTP_CONFLICT);
-            response.setBody(e.getMessage());
-            return response;
+            return Util.createErrorResponse(
+                    HttpURLConnection.HTTP_CONFLICT,
+                    null,
+                    e.getMessage());
         } catch (Exception e) {
-            APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
-            response.setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR);
-            response.setBody(e.getMessage());
-            return response;
+            return Util.createErrorResponse(
+                    HttpURLConnection.HTTP_INTERNAL_ERROR,
+                    null,
+                    e.getMessage());
         }
     }
 }

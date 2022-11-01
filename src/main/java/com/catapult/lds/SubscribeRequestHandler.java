@@ -127,7 +127,7 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
                     subscriptionID);
 
         } catch (JsonProcessingException e) {
-            return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
+            return Util.createErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
                     subscriptionRequestContext.getRequestId(),
                     e.getMessage());
 
@@ -136,19 +136,19 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
             JSONArray validationViolations = new JSONArray();
             subscriptionRequestContext.getValidationViolations().forEach(v -> validationViolations.put(v));
 
-            return Util.createSubscriptionErrorResponse(
+            return Util.createErrorResponse(
                     HttpURLConnection.HTTP_BAD_REQUEST,
                     subscriptionRequestContext.getRequestId(),
                     validationViolations.toString());
 
         } catch (SubscriptionException e) {
-            return Util.createSubscriptionErrorResponse(
+            return Util.createErrorResponse(
                     HttpURLConnection.HTTP_INTERNAL_ERROR,
                     subscriptionRequestContext.getRequestId(),
                     e.getMessage());
 
         } catch (UnauthorizedUserException e) {
-            return Util.createSubscriptionErrorResponse(
+            return Util.createErrorResponse(
                     HttpURLConnection.HTTP_UNAUTHORIZED,
                     subscriptionRequestContext.getRequestId(),
                     e.getMessage());
@@ -166,15 +166,20 @@ public class SubscribeRequestHandler implements RequestHandler<APIGatewayV2WebSo
      * @pre body != null
      * @pre connectionId != null
      * @pre requestContext != null
+     * @pre subscriptionRequestContext != null
      * @post
      */
     String processSubscriptionRequest(String body, String connectionId,
                                       APIGatewayV2WebSocketEvent.RequestContext requestContext,
                                       SubscriptionRequestContext subscriptionRequestContext)
             throws JsonProcessingException, SubscriptionException, UnauthorizedUserException, InvalidRequestException {
+        assert body != null;
+        assert connectionId != null;
+        assert requestContext != null;
+        assert subscriptionRequestContext != null;
 
         // Deserialize the request
-        final SubscriptionRequest subscriptionRequest = SubscribeRequestHandler.objectMapper.readValue(body, SubscriptionRequest.class);
+        final SubscriptionRequest subscriptionRequest = objectMapper.readValue(body, SubscriptionRequest.class);
         subscriptionRequestContext.setRequestId(subscriptionRequest.getRequestId());
 
         // Validate the request
