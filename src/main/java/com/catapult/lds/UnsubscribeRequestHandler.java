@@ -74,11 +74,11 @@ public class UnsubscribeRequestHandler implements RequestHandler<APIGatewayV2Web
                     UnsubscribeRequest.class);
 
         } catch (JsonProcessingException e) {
-            return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST, null, e.getMessage());
+            return Util.createErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST, null, e.getMessage());
         }
 
         if (unsubscribeRequest.requestId == null || unsubscribeRequest.subscriptionId == null) {
-            return Util.createSubscriptionErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
+            return Util.createErrorResponse(HttpURLConnection.HTTP_BAD_REQUEST,
                     unsubscribeRequest.requestId, "Unsubscribe request missing required fields ");
         }
 
@@ -93,7 +93,7 @@ public class UnsubscribeRequestHandler implements RequestHandler<APIGatewayV2Web
                     HttpURLConnection.HTTP_OK,
                     unsubscribeRequest.requestId);
         } catch (SubscriptionException e) {
-            return Util.createSubscriptionErrorResponse(
+            return Util.createErrorResponse(
                     HttpURLConnection.HTTP_GONE,
                     unsubscribeRequest.requestId,
                     e.getMessage());

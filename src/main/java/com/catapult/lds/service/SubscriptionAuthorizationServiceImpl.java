@@ -86,19 +86,19 @@ public class SubscriptionAuthorizationServiceImpl implements SubscriptionAuthori
      * {@inheritDoc}
      */
     @Override
-    public void checkAuthorizationForUserResource(String userId, AuthContext authContext) throws UnauthorizedUserException, SubscriptionException {
+    public void checkAuthorizationForUserResource(String userId, AuthContext authContext) throws UnauthorizedUserException {
 
         assert (userId != null);
         assert (authContext != null);
 
         if (authContext.getSubject() == null) {
-            throw new SubscriptionException("Unable to validate user permissions, Subject not found");
+            throw new UnauthorizedUserException("Unable to validate user permissions, Subject not found");
         }
         if (authContext.getToken() == null) {
-            throw new SubscriptionException("Unable to validate user permissions, Token not found");
+            throw new UnauthorizedUserException("Unable to validate user permissions, Token not found");
         }
         if (authContext.getAuth() == null || authContext.getAuth().getClaims() == null) {
-            throw new SubscriptionException("Unable to validate user permissions, Claims not found");
+            throw new UnauthorizedUserException("Unable to validate user permissions, Claims not found");
         }
 
         // validating LDS scope

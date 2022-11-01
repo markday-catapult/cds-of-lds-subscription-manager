@@ -21,8 +21,8 @@ public class AuthContextTest {
 
         Path path = Paths.get("src/test/resources/authcontext.json");
         String jsonData = Files.lines(path).collect(joining("\n"));
-        AuthContext context = mapper.readValue(jsonData, AuthContext.class);
-        Map<String, Object> requestContext = Map.of("catapultsports", mapper.writeValueAsString(context));
+        AuthContext context = this.mapper.readValue(jsonData, AuthContext.class);
+        Map<String, Object> requestContext = Map.of("catapultsports", this.mapper.writeValueAsString(context));
         AuthContext authContext = AuthContext.extractContext(requestContext);
         Assert.assertEquals(authContext.getSubject(), "ee8758ec-fe5f-4574-8b71-ba24f30ee672");
         Assert.assertTrue(authContext.containsScope("com.catapultsports.services.lds"));

@@ -43,13 +43,26 @@ public class Util {
         return response;
     }
 
-    public static APIGatewayV2WebSocketResponse createSubscriptionErrorResponse(int status,
-                                                                                String requestId,
-                                                                                String errorMessage) {
+    /**
+     * Creates an error response to be returned to the client with the given status, error message, and request id if
+     * present.
+     *
+     * @pre status > 0
+     * @pre errorMessage != null
+     */
+    public static APIGatewayV2WebSocketResponse createErrorResponse(int status,
+                                                                    String requestId,
+                                                                    String errorMessage) {
+
+        assert status > 0;
+        assert errorMessage != null;
+
         JSONObject responseBody = new JSONObject();
         responseBody.put("status", status);
-        responseBody.put("requestId", requestId);
         responseBody.put("errorMessage", errorMessage);
+        if (requestId != null) {
+            responseBody.put("requestId", requestId);
+        }
 
         APIGatewayV2WebSocketResponse response = new APIGatewayV2WebSocketResponse();
         response.setStatusCode(status);
