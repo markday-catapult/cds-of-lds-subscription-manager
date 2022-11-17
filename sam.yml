@@ -145,7 +145,7 @@ Resources:
       ApiKeyRequired: No
       AuthorizationType: CUSTOM
       AuthorizerId:
-        Fn::ImportValue: !Sub  '${ApiGatewayAuthorizerStack}:websocket-connect-authorizer-id'
+        Fn::ImportValue: !Sub  '${ApiGatewayAuthorizerStack}:authorizer-id'
       OperationName: Connect
       RouteKey: $connect
       Target: !Join
